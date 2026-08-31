@@ -13,7 +13,13 @@
 // ถ้าไม่ตั้ง จะใช้เกณฑ์กลาง: visit ของวันนี้ที่มียอดเงิน (income > 0)
 import { getDb, isDbConfigured } from "@/lib/db";
 import { demoRows } from "@/lib/cashier.demo";
-import type { CashierData, CashierRow, CashierStatus } from "@/lib/cashier.types";
+import { maskSurname } from "@/lib/mask";
+import type {
+  CashierData,
+  CashierRow,
+  CashierStatus,
+  TvData,
+} from "@/lib/cashier.types";
 
 /** รหัสแผนกห้องเก็บเงิน — คั่นด้วย comma ใน env */
 function cashierDepCodes(): string[] {
@@ -165,5 +171,46 @@ export async function getCashierQueue(date?: string): Promise<CashierData> {
     source: "hosxp",
     rows,
     summary: buildSummary(rows),
+  };
+}
+
+// ─── จอ TV (หน้าจอสาธารณะ) ──────────────────────────────────────────────────
+// ต่างจากคอนโซลเจ้าหน้าที่ 3 อย่าง:
+//   1) ไม่ส่ง VN/HN ออกไปเลย — จอตั้งในที่สาธารณะ ข้อมูลระบุตัวตนไม่ควรออกจาก server
+//   2) นามสกุลถูกปิดบัง (maskSurname)
+//   3) เอาเฉพาะคนที่ยังไม่ชำระ เรียง "กำลังชำระ" ขึ้นก่อน แล้วตามเวลา
+//      → พอคนหน้าจ่ายครบก็หลุดจากจอ คนถัดไปเลื่อนขึ้นมาเอง
+const TV_ROWS_DEFAULT = 10;
+
+export function tvRowLimit(): number {
+  const n = Number(process.env.TV_ROWS ?? TV_ROWS_DEFAULT);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : TV_ROWS_DEFAULT;
+}
+
+export async function getTvQueue(date?: string): Promise<TvData> {
+  const data = await getCashierQueue(date);
+
+  const pending = data.rows
+    .filter((r) => r.status !== "ชำระแล้ว")
+    .sort((a, b) => {
+      // คนที่อยู่หน้าเคาน์เตอร์ (กำลังชำระ) ขึ้นบนสุดเสมอ ที่เหลือเรียงตามเวลาส่ง
+      const rank = (s: CashierStatus) => (s === "กำลังชำระ" ? 0 : 1);
+      return rank(a.status) - rank(b.status) || a.time.localeCompare(b.time);
+    });
+
+  return {
+    updatedAt: data.updatedAt,
+    date: data.date,
+    source: data.source,
+    rows: pending.slice(0, tvRowLimit()).map((r, i) => ({
+      id: String(i + 1),
+      name: maskSurname(r.name),
+      dept: r.dept,
+      time: r.time,
+      status: r.status,
+      amount: r.amount,
+    })),
+    waiting: pending.length,
+    done: data.rows.filter((r) => r.status === "ชำระแล้ว").length,
   };
 }

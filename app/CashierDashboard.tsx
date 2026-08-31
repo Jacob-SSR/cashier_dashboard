@@ -280,6 +280,19 @@ export default function CashierDashboard({
         <div className="header-actions">
           <a
             className="theme-btn"
+            href="/tv"
+            target="tvBoard"
+            title="เปิดจอคิวสำหรับทีวี"
+            style={{ textDecoration: "none" }}
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <rect x="2" y="7" width="20" height="13" rx="2" />
+              <polyline points="7 3 12 7 17 3" />
+            </svg>
+            จอ TV
+          </a>
+          <a
+            className="theme-btn"
             href={callDisplayUrl}
             target="callDisplay"
             title="เปิดหน้าจอเรียกชื่อ"

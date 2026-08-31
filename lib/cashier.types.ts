@@ -38,3 +38,27 @@ export interface CashierData {
     outstanding: number;
   };
 }
+
+/** 1 แถวบนจอ TV — ไม่มี VN/HN และนามสกุลถูกปิดบังแล้ว */
+export interface TvRow {
+  /** ลำดับคิวบนจอ (ไม่ใช่ vn — จอ TV ไม่ส่งข้อมูลระบุตัวตนออกไป) */
+  id: string;
+  name: string;
+  dept: string;
+  time: string;
+  status: CashierStatus;
+  amount: number;
+}
+
+/** payload ที่ /api/cashier/tv ส่งกลับ */
+export interface TvData {
+  updatedAt: string;
+  date: string;
+  source: "hosxp" | "demo";
+  /** คิวที่แสดงบนจอ (สูงสุดตาม TV_ROWS) */
+  rows: TvRow[];
+  /** จำนวนที่ยังไม่ชำระทั้งหมด (รวมคนที่ยังไม่ขึ้นจอ) */
+  waiting: number;
+  /** ชำระเสร็จแล้ววันนี้ */
+  done: number;
+}
