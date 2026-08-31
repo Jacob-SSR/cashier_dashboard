@@ -1,36 +1,133 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ห้องเก็บเงินแดง — cashier_dashboard
 
-## Getting Started
+หน้าจอคิวชำระเงินของห้องเก็บเงิน: ดึงรายชื่อผู้ป่วยที่ถูกส่งมาชำระเงินจาก **HOSxP (MySQL)**
+แสดงยอด/สถานะแบบสด มีปุ่ม **เรียกชื่อ** (อ่านออกเสียงภาษาไทย + เปิดจอแสดงผลให้ผู้ป่วยเห็น)
 
-First, run the development server:
+Deploy ด้วย **Docker** และรันที่ **พอร์ต 4500** (แยกจาก `ppc-hos-dashboard` ที่ใช้ 3000)
+
+---
+
+## Deploy ด้วย Docker (ใช้งานจริง)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# 1) ตั้งค่า env
+cp .env.example .env.production
+nano .env.production        # ใส่ DB_HOST / DB_USER / DB_PASS / DB_NAME ของ HOSxP
+
+# 2) build + รัน
+docker compose up -d --build
+
+# 3) เปิดใช้งาน
+#    http://<ip-เครื่อง>:4500          → หน้าจอห้องเก็บเงิน
+#    http://<ip-เครื่อง>:4500/display  → จอเรียกชื่อ (เปิดบนทีวี/จอที่สอง)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+คำสั่งที่ใช้บ่อย
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+docker compose logs -f app     # ดู log
+docker compose restart app     # รีสตาร์ต
+docker compose down            # หยุด
+docker compose up -d --build   # deploy เวอร์ชันใหม่หลังแก้โค้ด
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### เรื่องพอร์ต 4500
 
-## Learn More
+พอร์ตถูกตั้งไว้ 3 ที่ ให้ตรงกันเสมอ — ถ้าจะเปลี่ยนต้องแก้ทั้งสามที่:
 
-To learn more about Next.js, take a look at the following resources:
+| ไฟล์ | บรรทัด |
+| --- | --- |
+| `Dockerfile` | `EXPOSE 4500` / `ENV PORT=4500` |
+| `docker-compose.yml` | `ports: - "4500:4500"` และ healthcheck |
+| `package.json` | `next dev -p 4500` / `next start -p 4500` |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+ถ้าอยากเปลี่ยนเฉพาะพอร์ตฝั่ง host (เข้าเว็บทางพอร์ตอื่น แต่ใน container ยังเป็น 4500)
+แก้แค่ `docker-compose.yml` เป็น `"8080:4500"` พอ
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### หมายเหตุตอน build
 
-## Deploy on Vercel
+- เครื่องที่ build **ต้องต่อเน็ตได้** เพราะ `next/font/google` โหลดฟอนต์ Sarabun ตอน build
+- ค่า env ของ DB **ไม่จำเป็นตอน build** — `lib/db.ts` สร้าง connection pool แบบ lazy ตอน runtime
+  จึงเปลี่ยน `.env.production` แล้ว `docker compose restart` ได้เลย ไม่ต้อง build ใหม่
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## การเชื่อมต่อ HOSxP
+
+ตั้งค่าใน `.env.production` (ดูคำอธิบายทุกตัวใน [`.env.example`](.env.example))
+
+| ตัวแปร | ความหมาย |
+| --- | --- |
+| `DB_HOST` | IP เครื่อง HOSxP — ถ้า MySQL อยู่บนเครื่อง host เดียวกับ docker ใช้ `host.docker.internal` |
+| `DB_PORT` `DB_USER` `DB_PASS` `DB_NAME` | ค่าเชื่อมต่อ MySQL (ใช้ user ที่มีสิทธิ์ **อ่านอย่างเดียว** ก็พอ) |
+| `CASHIER_DEP_CODES` | รหัสแผนกห้องเก็บเงิน (`kskdepartment.depcode`) คั่นด้วย comma |
+| `HOSPITAL_NAME` | ชื่อ รพ. ที่โชว์บนหัวจอและจอเรียกชื่อ |
+| `REFRESH_SECONDS` | ระยะรีเฟรชอัตโนมัติ (ค่าเริ่มต้น 15 วินาที) |
+| `DEMO_MODE=1` | บังคับใช้ข้อมูลตัวอย่าง (ไว้สาธิต/อบรม) |
+
+**โหมดสาธิต:** ถ้ายังไม่ได้ตั้ง `DB_HOST/DB_USER/DB_PASS/DB_NAME` ครบ ระบบจะขึ้นข้อมูลตัวอย่างพร้อมแถบเตือน
+สีเหลือง — เปิดดูหน้าจอได้ทันทีตั้งแต่ `docker compose up` ครั้งแรก แล้วค่อยเติมค่า DB ทีหลัง
+
+### หา `CASHIER_DEP_CODES` และตรวจข้อมูลก่อนใช้จริง
+
+เปิด [`docs/sql/cashier_queue.sql`](docs/sql/cashier_queue.sql) รันใน HeidiSQL/MySQL client:
+
+1. ข้อ 1 — หา `depcode` ของแผนกห้องเก็บเงิน → เอาไปใส่ `CASHIER_DEP_CODES`
+2. ข้อ 3 — รัน query เดียวกับที่แอปยิง ดูว่าได้รายชื่อครบไหม
+3. ข้อ 5 — กระทบยอดรวมกับรายงานการเงินของวัน
+
+ถ้าไม่ตั้ง `CASHIER_DEP_CODES` ระบบจะใช้เกณฑ์กลาง: *visit OPD ของวันนี้ที่มียอดเงิน (`income > 0`)*
+
+### เกณฑ์แปลงสถานะ
+
+| สถานะบนจอ | เงื่อนไข |
+| --- | --- |
+| ชำระแล้ว | `income > 0` และ `paid_money >= income` |
+| กำลังชำระ | ยังจ่ายไม่ครบ และ (ชื่อสถานะ HOSxP มีคำว่า "กำลังชำระ" **หรือ** `cur_dep` = ห้องเก็บเงิน) |
+| รอชำระ | ที่เหลือ |
+
+ปุ่ม **"เริ่มชำระ"** บนหน้าจอเป็นการทำเครื่องหมายบนจอเท่านั้น (ให้เจ้าหน้าที่เห็นว่ากำลังเรียกใครอยู่)
+**ไม่เขียนกลับ HOSxP** — การรับเงินจริงยังบันทึกในโปรแกรม HOSxP ตามเดิม
+เมื่อ HOSxP บันทึกว่าชำระแล้ว รอบรีเฟรชถัดไปแถวนั้นจะเปลี่ยนเป็น "ชำระแล้ว" เอง
+
+> แอปนี้อ่านข้อมูลอย่างเดียว (`SELECT`) ไม่มีคำสั่งเขียนใด ๆ ไปที่ฐานข้อมูล HOSxP
+
+---
+
+## เรียกชื่อ / จอแสดงผล
+
+- ปุ่ม **เรียกชื่อ** ในตาราง: อ่านออกเสียงชื่อผู้ป่วยผ่าน Web Speech API (เสียงไทย `th-TH`)
+  พร้อมเปิด/อัปเดตหน้าต่าง `/display`
+- ปุ่ม **จอแสดงผล** บนหัวจอ: เปิด `/display` ค้างไว้บนทีวีหน้าห้องเก็บเงิน
+- เบราว์เซอร์ต้องอนุญาต pop-up ของเว็บนี้ และเสียงจะเล่นได้หลังคลิกบนหน้าเว็บครั้งแรก
+- เสียงไทยขึ้นกับ OS ของเครื่องที่เปิดหน้าจอ (Windows ต้องติดตั้ง Thai language pack)
+
+---
+
+## พัฒนา (dev)
+
+```bash
+npm install
+npm run dev          # http://localhost:4500
+npm run typecheck    # tsc --noEmit
+npm run lint
+npm run build
+```
+
+## โครงสร้างไฟล์
+
+```
+app/
+  page.tsx              เพจหลัก — โหลดข้อมูลรอบแรกฝั่ง server
+  CashierDashboard.tsx  หน้าจอตาราง/ค้นหา/เรียกชื่อ (client component)
+  display/page.tsx      จอเรียกชื่อสำหรับผู้ป่วย
+  api/cashier/route.ts  GET /api/cashier?date=YYYY-MM-DD
+  dept.ts               จับคู่ชื่อแผนก → สี/ไอคอนของป้าย
+  globals.css           สไตล์ทั้งหมด (ยกจากต้นแบบ cashier_dashboard.html)
+lib/
+  db.ts                 connection pool MySQL (lazy, tis620)
+  cashier.service.ts    SQL + เกณฑ์แปลงสถานะ
+  cashier.types.ts      type ที่ใช้ร่วม server/client
+  cashier.demo.ts       ข้อมูลตัวอย่างของโหมดสาธิต
+docs/sql/cashier_queue.sql
+```

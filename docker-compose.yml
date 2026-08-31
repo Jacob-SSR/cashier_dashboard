@@ -1,0 +1,34 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: cashier-dashboard:latest
+    container_name: cashier-dashboard
+    restart: unless-stopped
+    # host:container — แยกพอร์ตเป็น 4500 ไม่ชนกับ ppc-hos-dashboard (3000)
+    ports:
+      - "4500:4500"
+    # ค่า runtime (DB/ชื่อ รพ.) อ่านจากไฟล์นี้ — คัดลอกจาก .env.example
+    # required: false = ยังไม่มีไฟล์ก็ขึ้นได้ (รันโหมดสาธิต) ไม่ต้องรอตั้งค่า DB ก่อน
+    env_file:
+      - path: .env.production
+        required: false
+    environment:
+      - TZ=Asia/Bangkok
+    # ให้ container เรียก MySQL ที่รันบน "เครื่อง host เดียวกัน" ผ่าน host.docker.internal ได้
+    # (ถ้า HOSxP อยู่คนละเครื่องในวง LAN ให้ใส่ IP จริงใน DB_HOST แทน แล้วบรรทัดนี้ไม่จำเป็น)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4500/api/cashier').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s

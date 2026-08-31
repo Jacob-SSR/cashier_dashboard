@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# แต่ต้องเก็บ .env.example ไว้เป็นตัวอย่างค่าที่ต้องตั้ง
+!.env.example
