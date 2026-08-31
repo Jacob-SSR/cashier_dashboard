@@ -710,20 +710,35 @@ tbody tr.calling-row td { background: #EFF7FF; }
   opacity: 0.92;
 }
 
-/* ═══ จอ TV หน้าห้องเก็บเงิน (/tv) ═══════════════════════════
+/* ═══ จอ TV หน้าห้องเก็บเงิน (/tv) ═══════════════════════════════════════════
    ออกแบบที่ 55 นิ้ว / 1080p ดูจากระยะ 4–6 เมตร
-   ทุกขนาดคิดเป็น vh → เต็มจอพอดีไม่มี scroll และขยายเองบนจอ 4K
-   จำนวนแถวคุมด้วย TV_ROWS (ค่าเริ่มต้น 10) ถ้าเพิ่มแถวมาก ๆ ให้ลด --tv-row ลง */
+   - โทนเขียวมิ้น: ตั้ง token ทับทั้งชุดบน .tv จอ TV จึงเป็นสีเดียวเสมอ
+     ไม่เปลี่ยนตามธีมมืด/สว่างของเบราว์เซอร์ที่เสียบกับทีวี
+   - แยกเป็นช่อง ช่องละ TV_ROWS_PER_COLUMN คิว (ค่าเริ่มต้น 5)
+   - ความสูงแถวใช้ flex:1 → แบ่งพื้นที่เท่ากันเอง ปรับจำนวนคิวแล้วไม่ต้องแก้ CSS */
 .tv {
-  --tv-row: 7.1vh;   /* ความสูงต่อแถว */
-  --tv-gap: 0.5vh;
+  /* ── โทนเขียวมิ้น ── */
+  --tv-bg:          #EDFBF5;
+  --tv-surface:     #FFFFFF;
+  --tv-surface-alt: #E3F7EE;
+  --tv-head-from:   #7FD9B4;
+  --tv-head-to:     #56C9C4;
+  --tv-accent:      #0E8A63;
+  --tv-accent-dim:  #C4EEDD;
+  --tv-text:        #12312A;
+  --tv-muted:       #5E8B7C;
+  --tv-border:      #CDEDE0;
+  --tv-serving-bg:  #CFF3E4;
+
   --tv-pad: 2.2vw;
+  --tv-gap: 1vh;
 
   height: 100vh;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--tv-bg);
+  color: var(--tv-text);
 }
 
 /* ─── หัวจอ ─────────────────────────────────────────────── */
@@ -735,9 +750,9 @@ tbody tr.calling-row td { background: #EFF7FF; }
   align-items: center;
   justify-content: space-between;
   gap: 2vw;
-  background: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%);
+  background: linear-gradient(135deg, var(--tv-head-from) 0%, var(--tv-head-to) 100%);
   color: #fff;
-  box-shadow: 0 2px 16px var(--shadow);
+  box-shadow: 0 2px 16px rgba(14, 138, 99, 0.18);
 }
 
 .tv-title {
@@ -753,7 +768,7 @@ tbody tr.calling-row td { background: #EFF7FF; }
   width: 8vh;
   height: 8vh;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.32);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -764,14 +779,14 @@ tbody tr.calling-row td { background: #EFF7FF; }
   font-size: 5.4vh;
   font-weight: 700;
   line-height: 1.1;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
   white-space: nowrap;
 }
 
 .tv-title p {
   font-size: 2.6vh;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
   white-space: nowrap;
 }
 
@@ -786,134 +801,165 @@ tbody tr.calling-row td { background: #EFF7FF; }
   line-height: 1;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.03em;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 1.2vh;
 }
 
-/* จุดแดง = ดึงข้อมูลรอบล่าสุดไม่สำเร็จ (ข้อมูลบนจอเป็นของเก่า) */
+/* จุดแดง = ดึงข้อมูลรอบล่าสุดไม่สำเร็จ (ตัวเลขบนจอเป็นของเก่า) */
 .tv-offline {
   width: 1.6vh;
   height: 1.6vh;
   border-radius: 50%;
   background: #E4405F;
-  box-shadow: 0 0 0 0.5vh rgba(228, 64, 95, 0.3);
+  box-shadow: 0 0 0 0.5vh rgba(228, 64, 95, 0.28);
 }
 
 .tv-clock-date {
   font-size: 2.4vh;
-  color: rgba(255, 255, 255, 0.85);
+  color: rgba(255, 255, 255, 0.9);
   margin-top: 0.4vh;
 }
 
-/* ─── หัวคอลัมน์ + แถว (grid ชุดเดียวกัน คอลัมน์จึงตรงกันเสมอ) ─── */
-.tv-colhead,
-.tv-row {
-  display: grid;
-  grid-template-columns: 7vh 12vh minmax(0, 1fr) 30vh 22vh 30vh;
-  align-items: center;
-  gap: 1.4vw;
-  padding: 0 var(--tv-pad);
-}
-
-.tv-colhead {
-  flex-shrink: 0;
-  height: 5.4vh;
-  font-size: 2.3vh;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: 0.06em;
-  background: var(--surface-alt);
-  border-bottom: 2px solid var(--border);
-}
-
-.tv-rows {
+/* ─── พื้นที่ช่องคิว ─────────────────────────────────────── */
+.tv-columns {
   flex: 1;
   display: flex;
-  flex-direction: column;
-  gap: var(--tv-gap);
-  padding: var(--tv-gap) 0;
+  gap: 1.4vw;
+  padding: 1.6vh var(--tv-pad);
   min-height: 0;
 }
 
+/* 1 ช่อง = 5 คิว (ตาม TV_ROWS_PER_COLUMN) */
+.tv-column {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--tv-gap);
+  background: var(--tv-surface-alt);
+  border: 1px solid var(--tv-border);
+  border-radius: 2.4vh;
+  padding: var(--tv-gap);
+}
+
+/* ─── แถวคิว ─────────────────────────────────────────────
+   flex:1 → 5 แถวแบ่งความสูงของช่องเท่า ๆ กันเอง */
 .tv-row {
-  height: var(--tv-row);
-  flex-shrink: 0;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  font-size: 3.4vh;
-  color: var(--text);
+  flex: 1 1 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 9.5vh minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1.4vh;
+  padding: 0 2vh;
+  background: var(--tv-surface);
+  border: 1px solid var(--tv-border);
+  border-radius: 1.8vh;
 }
 
 .tv-row-empty {
   background: transparent;
-  border-bottom-color: transparent;
+  border-color: transparent;
 }
 
-/* แถวที่กำลังเรียกให้มาชำระ — เน้นให้เห็นจากท้ายห้อง */
+/* คิวที่เรียกให้มาชำระอยู่ตอนนี้ — เน้นให้เห็นจากท้ายห้อง */
 .tv-row-serving {
-  background: var(--row-serving);
-  border-left: 1vh solid var(--st-serve-text);
-  padding-left: calc(var(--tv-pad) - 1vh);
+  background: var(--tv-serving-bg);
+  border-color: var(--tv-accent);
+  box-shadow: inset 1vh 0 0 var(--tv-accent);
 }
 
-.tv-c-seq {
-  font-size: 3.6vh;
+.tv-seq {
+  font-size: 5.2vh;
   font-weight: 700;
-  color: var(--text-muted);
+  line-height: 1;
+  text-align: center;
+  color: var(--tv-muted);
   font-variant-numeric: tabular-nums;
 }
 
-.tv-c-time {
-  font-size: 3.2vh;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+.tv-row-serving .tv-seq {
+  color: var(--tv-accent);
 }
 
-.tv-c-name {
-  font-size: 4.2vh;
-  font-weight: 600;
+.tv-main {
+  min-width: 0;
+}
+
+.tv-name {
+  font-size: 4.4vh;
+  font-weight: 700;
+  line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tv-c-amount {
-  font-size: 3.6vh;
-  font-weight: 700;
-  text-align: right;
+.tv-meta {
+  display: flex;
+  align-items: center;
+  gap: 1vh;
+  margin-top: 0.4vh;
+  font-size: 2.6vh;
+  color: var(--tv-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-meta-time {
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.tv-dept,
+.tv-right {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.tv-amount {
+  font-size: 4.4vh;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.tv-amount span {
+  font-size: 2.8vh;
+  font-weight: 500;
+  color: var(--tv-muted);
+  margin-left: 0.4vh;
+}
+
 .tv-status {
   display: inline-flex;
   align-items: center;
   gap: 0.8vh;
+  margin-top: 0.6vh;
   border-radius: 10vh;
-  padding: 0.7vh 1.8vh;
-  font-size: 2.5vh;
+  padding: 0.5vh 1.6vh;
+  font-size: 2.4vh;
   font-weight: 600;
   white-space: nowrap;
-  max-width: 100%;
-  overflow: hidden;
 }
 
 .tv-status-serving {
-  background: var(--st-serve-bg);
-  color: var(--st-serve-text);
+  background: var(--tv-accent);
+  color: #fff;
+}
+
+.tv-status-serving .pulse-dot {
+  background: #fff;
+  width: 1.2vh;
+  height: 1.2vh;
 }
 
 .tv-status-wait {
-  background: var(--st-wait-bg);
-  color: var(--st-wait-text);
-}
-
-.tv-row-serving .pulse-dot {
-  width: 1.4vh;
-  height: 1.4vh;
+  background: var(--tv-accent-dim);
+  color: var(--tv-accent);
 }
 
 /* ─── ท้ายจอ ────────────────────────────────────────────── */
@@ -925,20 +971,20 @@ tbody tr.calling-row td { background: #EFF7FF; }
   align-items: center;
   justify-content: space-between;
   gap: 2vw;
-  background: var(--surface-alt);
-  border-top: 1px solid var(--border);
+  background: var(--tv-surface-alt);
+  border-top: 1px solid var(--tv-border);
   font-size: 2.6vh;
-  color: var(--text-muted);
+  color: var(--tv-muted);
 }
 
 .tv-footer b {
-  color: var(--accent);
+  color: var(--tv-accent);
   font-weight: 700;
 }
 
 .tv-demo {
-  background: var(--st-wait-bg);
-  color: var(--st-wait-text);
+  background: var(--tv-accent-dim);
+  color: var(--tv-accent);
   border-radius: 10vh;
   padding: 0.5vh 1.6vh;
   font-weight: 600;

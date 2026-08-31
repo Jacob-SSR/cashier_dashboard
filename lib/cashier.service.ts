@@ -181,10 +181,21 @@ export async function getCashierQueue(date?: string): Promise<CashierData> {
 //   3) เอาเฉพาะคนที่ยังไม่ชำระ เรียง "กำลังชำระ" ขึ้นก่อน แล้วตามเวลา
 //      → พอคนหน้าจ่ายครบก็หลุดจากจอ คนถัดไปเลื่อนขึ้นมาเอง
 const TV_ROWS_DEFAULT = 10;
+const TV_ROWS_PER_COLUMN_DEFAULT = 5;
 
+function positiveInt(raw: string | undefined, fallback: number): number {
+  const n = Number(raw ?? fallback);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+}
+
+/** จำนวนคิวทั้งหมดบนจอ TV */
 export function tvRowLimit(): number {
-  const n = Number(process.env.TV_ROWS ?? TV_ROWS_DEFAULT);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : TV_ROWS_DEFAULT;
+  return positiveInt(process.env.TV_ROWS, TV_ROWS_DEFAULT);
+}
+
+/** จำนวนคิวต่อ 1 ช่อง — 10 คิว ÷ ช่องละ 5 = 2 ช่อง */
+export function tvRowsPerColumn(): number {
+  return positiveInt(process.env.TV_ROWS_PER_COLUMN, TV_ROWS_PER_COLUMN_DEFAULT);
 }
 
 export async function getTvQueue(date?: string): Promise<TvData> {

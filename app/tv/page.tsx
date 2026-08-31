@@ -1,7 +1,7 @@
 // app/tv/page.tsx
 // จอคิวสำหรับทีวีหน้าห้องเก็บเงิน — ไม่มี VN/HN, นามสกุลปิดบัง, แสดง TV_ROWS คิวแรก
 import TvBoard from "../TvBoard";
-import { getTvQueue, tvRowLimit } from "@/lib/cashier.service";
+import { getTvQueue, tvRowLimit, tvRowsPerColumn } from "@/lib/cashier.service";
 import type { TvData } from "@/lib/cashier.types";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,7 @@ export default async function TvPage() {
   const hospitalName = process.env.HOSPITAL_NAME || "โรงพยาบาลพลับพลาชัย";
   const refreshSeconds = Number(process.env.REFRESH_SECONDS ?? 15);
   const rowLimit = tvRowLimit();
+  const rowsPerColumn = tvRowsPerColumn();
 
   let initialData: TvData;
   try {
@@ -36,6 +37,7 @@ export default async function TvPage() {
       initialData={initialData}
       hospitalName={hospitalName}
       rowLimit={rowLimit}
+      rowsPerColumn={rowsPerColumn}
       refreshSeconds={refreshSeconds}
     />
   );

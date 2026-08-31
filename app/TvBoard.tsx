@@ -11,6 +11,8 @@ interface Props {
   initialData: TvData;
   hospitalName: string;
   rowLimit: number;
+  /** จำนวนคิวต่อ 1 ช่อง — 10 คิว ช่องละ 5 = 2 ช่อง */
+  rowsPerColumn: number;
   refreshSeconds: number;
 }
 
@@ -26,6 +28,7 @@ export default function TvBoard({
   initialData,
   hospitalName,
   rowLimit,
+  rowsPerColumn,
   refreshSeconds,
 }: Props) {
   const [data, setData] = useState<TvData>(initialData);
@@ -69,6 +72,12 @@ export default function TvBoard({
     (_, i) => data.rows[i] ?? null,
   );
 
+  // ตัดเป็นช่อง ๆ ช่องละ rowsPerColumn (10 คิว ช่องละ 5 = 2 ช่อง)
+  const columns: (TvRow | null)[][] = [];
+  for (let i = 0; i < slots.length; i += rowsPerColumn) {
+    columns.push(slots.slice(i, i + rowsPerColumn));
+  }
+
   const more = Math.max(0, data.waiting - data.rows.length);
 
   return (
@@ -91,44 +100,52 @@ export default function TvBoard({
         </div>
       </header>
 
-      <div className="tv-colhead">
-        <span className="tv-c-seq">คิว</span>
-        <span className="tv-c-time">เวลา</span>
-        <span className="tv-c-name">ชื่อ</span>
-        <span className="tv-c-dept">แผนกที่ส่ง</span>
-        <span className="tv-c-amount">ยอดชำระ (฿)</span>
-        <span className="tv-c-status">สถานะ</span>
-      </div>
+      <div className="tv-columns">
+        {columns.map((col, c) => (
+          <div className="tv-column" key={c}>
+            {col.map((row, i) => {
+              const seq = c * rowsPerColumn + i + 1;
+              if (!row)
+                return <div key={`empty-${seq}`} className="tv-row tv-row-empty" />;
 
-      <div className="tv-rows">
-        {slots.map((row, i) => {
-          if (!row) return <div key={`empty-${i}`} className="tv-row tv-row-empty" />;
-          const ds = deptStyle(row.dept);
-          const serving = row.status === "กำลังชำระ";
-          return (
-            <div key={row.id} className={`tv-row${serving ? " tv-row-serving" : ""}`}>
-              <span className="tv-c-seq">{i + 1}</span>
-              <span className="tv-c-time">{row.time}</span>
-              <span className="tv-c-name">{row.name}</span>
-              <span className="tv-c-dept">
-                <span className={`tv-dept ${ds.cls}`}>
-                  {ds.icon} {row.dept}
-                </span>
-              </span>
-              <span className="tv-c-amount">{row.amount.toLocaleString("th-TH")}</span>
-              <span className="tv-c-status">
-                {serving ? (
-                  <span className="tv-status tv-status-serving">
-                    <span className="pulse-dot" />
-                    เชิญชำระเงิน
-                  </span>
-                ) : (
-                  <span className="tv-status tv-status-wait">รอเรียก</span>
-                )}
-              </span>
-            </div>
-          );
-        })}
+              const serving = row.status === "กำลังชำระ";
+              return (
+                <div
+                  key={row.id}
+                  className={`tv-row${serving ? " tv-row-serving" : ""}`}
+                >
+                  <span className="tv-seq">{seq}</span>
+
+                  <div className="tv-main">
+                    <div className="tv-name">{row.name}</div>
+                    <div className="tv-meta">
+                      <span className="tv-meta-time">{row.time}</span>
+                      <span>·</span>
+                      <span>
+                        {deptStyle(row.dept).icon} {row.dept}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="tv-right">
+                    <div className="tv-amount">
+                      {row.amount.toLocaleString("th-TH")}
+                      <span>฿</span>
+                    </div>
+                    {serving ? (
+                      <span className="tv-status tv-status-serving">
+                        <span className="pulse-dot" />
+                        เชิญชำระเงิน
+                      </span>
+                    ) : (
+                      <span className="tv-status tv-status-wait">รอเรียก</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       <footer className="tv-footer">
