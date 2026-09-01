@@ -124,6 +124,14 @@ export default function TvBoard({
                       <span>
                         {deptStyle(row.dept).icon} {row.dept}
                       </span>
+                      <span>·</span>
+                      <span
+                        className={
+                          row.route === "มียา" ? "tv-route tv-route-drug" : "tv-route"
+                        }
+                      >
+                        {row.route === "มียา" ? "→ จ่ายแล้วรับยา" : "→ จ่ายแล้วกลับบ้าน"}
+                      </span>
                     </div>
                   </div>
 

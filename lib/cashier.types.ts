@@ -5,6 +5,13 @@
 /** สถานะคิวชำระเงิน — ตรงกับป้ายสถานะบนหน้าจอ */
 export type CashierStatus = "รอชำระ" | "กำลังชำระ" | "ชำระแล้ว";
 
+/**
+ * เส้นทางหลังพบแพทย์ ตาม flow ผู้ป่วยนอก
+ *   ไม่มียา → ห้องการเงิน → กลับบ้าน
+ *   มียา    → ห้องยา → ส่งรายชื่อ → ห้องการเงิน → กลับไปรับยาที่ห้องยา
+ */
+export type CashierRoute = "มียา" | "ไม่มียา";
+
 /** 1 แถว = 1 visit (VN) ที่ถูกส่งมาห้องเก็บเงิน */
 export interface CashierRow {
   /** ใช้ vn เป็น key ของแถว (unique ต่อวัน) */
@@ -17,6 +24,9 @@ export interface CashierRow {
   /** เวลาส่ง HH:MM */
   time: string;
   status: CashierStatus;
+  route: CashierRoute;
+  /** ขั้นตอนถัดไปหลังชำระเงิน — ว่างถ้ายังไม่ชำระ */
+  nextStep: string;
   /** ยอดที่ต้องชำระ (บาท) */
   amount: number;
 }
@@ -47,6 +57,8 @@ export interface TvRow {
   dept: string;
   time: string;
   status: CashierStatus;
+  /** มียา = จ่ายเงินแล้วต้องกลับไปรับยาที่ห้องยา */
+  route: CashierRoute;
   amount: number;
 }
 

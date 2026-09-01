@@ -32,7 +32,8 @@ const UPDATED_FMT = new Intl.DateTimeFormat("th-TH", {
   second: "2-digit",
 });
 
-type SortKey = "time" | "vn" | "hn" | "name" | "dept" | "amount" | "status";
+type SortKey =
+  | "time" | "vn" | "hn" | "name" | "dept" | "amount" | "status" | "route";
 
 interface Props {
   initialData: CashierData;
@@ -421,6 +422,7 @@ export default function CashierDashboard({
                 ยอดชำระ (฿)
               </th>
               <th onClick={() => sortBy("status")}>สถานะ</th>
+              <th onClick={() => sortBy("route")}>ไปต่อ</th>
               <th>เรียกชื่อ</th>
               <th>การดำเนินการ</th>
             </tr>
@@ -428,7 +430,7 @@ export default function CashierDashboard({
           <tbody>
             {visible.length === 0 ? (
               <tr>
-                <td colSpan={10}>
+                <td colSpan={11}>
                   <div className="empty-state">
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                       <circle cx="11" cy="11" r="8" />
@@ -469,6 +471,17 @@ export default function CashierDashboard({
                         {p.status}
                       </span>
                     </td>
+                    <td className="col-route">
+                      <span
+                        className={`route-badge${p.route === "มียา" ? " route-drug" : ""}`}
+                      >
+                        {p.route === "มียา" ? "💊 ห้องยา" : "🏠 กลับบ้าน"}
+                      </span>
+                      {/* ชำระแล้วแต่ยังไม่ได้รับยา = ยังมีขั้นตอนค้างตาม flow */}
+                      {p.nextStep === "กลับไปรับยาที่ห้องยา" && (
+                        <div className="route-next">ยังไม่รับยา</div>
+                      )}
+                    </td>
                     <td>
                       <button
                         className={`call-btn${callingId === p.id ? " calling" : ""}`}
@@ -507,7 +520,7 @@ export default function CashierDashboard({
           </tbody>
           <tfoot>
             <tr>
-              <td colSpan={10}>
+              <td colSpan={11}>
                 <div className="table-footer">
                   <span>แสดง {visible.length} รายการ</span>
                   <span>อัปเดตล่าสุด: {lastUpdate}</span>

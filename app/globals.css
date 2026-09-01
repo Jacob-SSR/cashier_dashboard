@@ -710,6 +710,32 @@ tbody tr.calling-row td { background: #EFF7FF; }
   opacity: 0.92;
 }
 
+/* ─── คอลัมน์ "ไปต่อ" (เส้นทางตาม flow หลังชำระเงิน) ───── */
+.col-route { white-space: nowrap; }
+
+.route-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--st-done-bg);
+  color: var(--st-done-text);
+}
+
+.route-badge.route-drug {
+  background: var(--dept-pharm-bg);
+  color: var(--dept-pharm-text);
+}
+
+.route-next {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* ═══ จอ TV หน้าห้องเก็บเงิน (/tv) ═══════════════════════════════════════════
    ออกแบบที่ 55 นิ้ว / 1080p ดูจากระยะ 4–6 เมตร
    - โทนเขียวมิ้น: ตั้ง token ทับทั้งชุดบน .tv จอ TV จึงเป็นสีเดียวเสมอ
@@ -987,5 +1013,15 @@ tbody tr.calling-row td { background: #EFF7FF; }
   color: var(--tv-accent);
   border-radius: 10vh;
   padding: 0.5vh 1.6vh;
+  font-weight: 600;
+}
+
+/* ป้ายเส้นทางบนจอ TV — บอกคนไข้ว่าจ่ายเงินแล้วไปไหนต่อ */
+.tv-route {
+  color: var(--tv-muted);
+}
+
+.tv-route-drug {
+  color: var(--tv-accent);
   font-weight: 600;
 }

@@ -1,7 +1,7 @@
 // lib/cashier.demo.ts
 // ข้อมูลตัวอย่างสำหรับโหมด demo (ยังไม่ตั้งค่า DB หรือ DEMO_MODE=1)
 // ชุดเดียวกับต้นแบบ cashier_dashboard.html — ใช้ตอนติดตั้ง/สาธิตหน้าจอ
-import type { CashierRow, CashierStatus } from "@/lib/cashier.types";
+import type { CashierRoute, CashierRow, CashierStatus } from "@/lib/cashier.types";
 
 interface Seed {
   hn: string;
@@ -62,6 +62,15 @@ export function demoRows(): CashierRow[] {
   const prefix = vnPrefix();
   return SEED.map((s, i) => {
     const vn = `${prefix}-${String(i + 1).padStart(4, "0")}`;
-    return { id: vn, vn, ...s };
+    // ข้อมูลตัวอย่าง: คนจากห้องยาถือว่ามียาแน่ ๆ ที่เหลือสลับมี/ไม่มี ให้เห็นทั้งสองเส้นทาง
+    const route: CashierRoute =
+      s.dept === "ห้องยา" || i % 3 !== 0 ? "มียา" : "ไม่มียา";
+    const nextStep =
+      s.status === "ชำระแล้ว"
+        ? route === "มียา"
+          ? "กลับไปรับยาที่ห้องยา"
+          : "กลับบ้าน"
+        : "";
+    return { id: vn, vn, route, nextStep, ...s };
   });
 }
