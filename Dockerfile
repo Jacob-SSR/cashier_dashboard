@@ -8,7 +8,16 @@ WORKDIR /app
 # ---------- deps ----------
 FROM base AS deps
 COPY package.json package-lock.json ./
-RUN npm ci
+
+# เน็ตของ รพ. ช้าและหลุดบ่อย (ลงครั้งแรกใช้ 6 นาที และเคย npm ci ล้มกลางทาง)
+# ค่าพวกนี้ทำให้ npm รอนานขึ้นและลองใหม่เองแทนที่จะยอมแพ้ทันที
+#   --no-audit  ตัดการเรียก endpoint ตรวจช่องโหว่ ซึ่งช้ามากและไม่จำเป็นตอน build
+#   --no-fund   ตัดข้อความขอบริจาค
+ENV npm_config_fetch_retries=5 \
+    npm_config_fetch_retry_mintimeout=20000 \
+    npm_config_fetch_retry_maxtimeout=180000 \
+    npm_config_fetch_timeout=600000
+RUN npm ci --no-audit --no-fund
 
 # ---------- builder ----------
 FROM base AS builder
