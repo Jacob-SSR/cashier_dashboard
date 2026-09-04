@@ -17,7 +17,13 @@ ENV npm_config_fetch_retries=5 \
     npm_config_fetch_retry_mintimeout=20000 \
     npm_config_fetch_retry_maxtimeout=180000 \
     npm_config_fetch_timeout=600000
-RUN npm ci --no-audit --no-fund
+# ถ้า package-lock.json หลุด sync กับ package.json (เช่นถูก pull ทับจาก branch อื่น
+# หรือถูกสร้างจาก npm คนละรุ่น) npm ci จะตายด้วย EUSAGE ทันที
+# จอนี้ต้องขึ้นให้ได้ก่อน จึงถอยไป npm install ให้มันแก้ lock ในภาพเองแทนที่จะ build ไม่ผ่าน
+# (เกิดจริงมาแล้ว: Missing @emnapi/runtime from lock file)
+RUN npm ci --no-audit --no-fund \
+    || (echo "!! package-lock.json ไม่ตรงกับ package.json - ถอยไปใช้ npm install" \
+        && npm install --no-audit --no-fund)
 
 # ---------- builder ----------
 FROM base AS builder
