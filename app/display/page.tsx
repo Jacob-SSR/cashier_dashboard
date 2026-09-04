@@ -1,15 +1,13 @@
 // app/display/page.tsx
-// จอแสดงผลเรียกชื่อ (เปิดบนทีวี/จอที่สอง)
-// dashboard จะเปิดหน้านี้พร้อม query: ?name=&hn=&vn=&dept=&hosp=
+// จอเรียกชื่อเต็มจอ (จอที่สอง/ทีวีอีกเครื่อง) — ขึ้นชื่อคนที่ถึงคิวทีละคน
+// ต่างจากหน้าแรกตรงที่หน้าแรกโชว์คิวทั้งกระดาน หน้านี้โชว์คนเดียวตัวใหญ่เต็มจอ
+import CallDisplay from "../CallDisplay";
+
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "เรียกชื่อ — ห้องเก็บเงินแดง",
+  title: "เรียกชื่อ — ห้องเก็บเงิน",
 };
-
-function first(v: string | string[] | undefined): string {
-  return (Array.isArray(v) ? v[0] : v) ?? "";
-}
 
 export default async function DisplayPage({
   searchParams,
@@ -17,35 +15,14 @@ export default async function DisplayPage({
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }) {
   const sp = await searchParams;
-  const name = first(sp.name);
-  const hn = first(sp.hn);
-  const vn = first(sp.vn);
-  const dept = first(sp.dept);
-  const hosp =
-    first(sp.hosp) || process.env.HOSPITAL_NAME || "โรงพยาบาลพลับพลาชัย";
+  // ?sound=0 = ปิดเสียงจอนี้ (ถ้าให้หน้าแรกเป็นตัวประกาศอยู่แล้ว)
+  const sound = (Array.isArray(sp.sound) ? sp.sound[0] : sp.sound) !== "0";
 
   return (
-    <main className="display-screen">
-      <div className="display-hosp">{hosp}</div>
-
-      {name ? (
-        <>
-          <div className="display-card">
-            <div className="display-lead">เชิญ</div>
-            <div className="display-name">{name}</div>
-            <div className="display-meta">
-              {hn && <span>HN {hn}</span>}
-              {vn && <span>VN {vn}</span>}
-              {dept && <span>{dept}</span>}
-            </div>
-          </div>
-          <div className="display-where">ชำระเงินที่ ห้องเก็บเงินแดง</div>
-        </>
-      ) : (
-        <div className="display-idle">
-          🏦 ห้องเก็บเงินแดง — รอเรียกคิวถัดไป
-        </div>
-      )}
-    </main>
+    <CallDisplay
+      hospitalName={process.env.HOSPITAL_NAME || "โรงพยาบาลพลับพลาชัย"}
+      refreshSeconds={Number(process.env.REFRESH_SECONDS ?? 15)}
+      sound={sound}
+    />
   );
 }

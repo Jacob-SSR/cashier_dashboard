@@ -12,7 +12,7 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "ห้องเก็บเงินแดง",
+  title: "ห้องเก็บเงินโรงพยาบาลพลับพลาชัย",
   description: "ระบบจัดการคิวชำระเงิน — เชื่อมต่อ HOSxP",
 };
 

@@ -1,37 +1,61 @@
 // app/page.tsx
-// เพจหลัก — ดึงข้อมูลรอบแรกฝั่ง server (จอเปิดมาเห็นข้อมูลทันที ไม่ต้องรอ fetch)
-// จากนั้น CashierDashboard จะรีเฟรชเองผ่าน /api/cashier
-import CashierDashboard from "./CashierDashboard";
-import { getCashierQueue } from "@/lib/cashier.service";
-import type { CashierData } from "@/lib/cashier.types";
+// จอคิวห้องการเงินสำหรับคนไข้ดู — เปิดหน้านี้เต็มจอ (F11) บนทีวีหน้าห้องการเงิน
+// โหลดข้อมูลรอบแรกฝั่ง server (จอเปิดมาเห็นคิวทันที ไม่ต้องรอ fetch)
+// จากนั้น QueueBoard จะรีเฟรช + ประกาศเรียกชื่อเองผ่าน /api/queue
+import QueueBoard from "./QueueBoard";
+import {
+  getBoardQueue,
+  boardRowLimit,
+  boardRowsPerColumn,
+} from "@/lib/cashier.service";
+import type { BoardData } from "@/lib/cashier.types";
 
 export const dynamic = "force-dynamic";
 
-export default async function Page() {
-  const hospitalName = process.env.HOSPITAL_NAME || "โรงพยาบาลพลับพลาชัย";
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const sp = await searchParams;
+  // ?sound=0 = ปิดเสียงจอนี้ (ใช้ตอนเปิดหลายจอในห้องเดียวกัน กันเสียงซ้อน)
+  const sound = (Array.isArray(sp.sound) ? sp.sound[0] : sp.sound) !== "0";
+
+  // เสียงที่ใช้ประกาศ — หน้างานเลือก "สิริ" ลองสลับสด ๆ ได้ด้วย ?voice=premwadee
+  // ดูว่าเครื่องที่ต่อจอมีเสียงอะไรบ้างที่ /voices
+  const voiceParam = Array.isArray(sp.voice) ? sp.voice[0] : sp.voice;
+  const voiceName = voiceParam || process.env.TTS_VOICE || "Siri";
+
+  const boardTitle =
+    process.env.BOARD_TITLE || "ห้องเก็บเงินโรงพยาบาลพลับพลาชัย";
   const refreshSeconds = Number(process.env.REFRESH_SECONDS ?? 15);
 
-  let initialData: CashierData;
+  let initialData: BoardData;
   try {
-    initialData = await getCashierQueue();
+    initialData = await getBoardQueue();
   } catch (err) {
-    // DB ล่มตอนเปิดหน้า → ยังให้เปิดหน้าจอได้ แล้วให้ client ลองรีเฟรชเอง
-    console.error("[page] initial load failed:", err);
+    // DB ล่มตอนเปิดจอ → ยังขึ้นหน้าจอได้ แล้วให้ client ลองรีเฟรชเอง
+    console.error("[board] initial load failed:", err);
     initialData = {
       updatedAt: new Date().toISOString(),
       date: "",
       source: "hosxp",
       rows: [],
-      summary: { wait: 0, serving: 0, done: 0, total: 0, outstanding: 0 },
+      called: [],
+      waiting: 0,
+      done: 0,
     };
   }
 
   return (
-    <CashierDashboard
+    <QueueBoard
       initialData={initialData}
-      hospitalName={hospitalName}
-      callDisplayUrl="/display"
+      boardTitle={boardTitle}
+      rowLimit={boardRowLimit()}
+      rowsPerColumn={boardRowsPerColumn()}
       refreshSeconds={refreshSeconds}
+      sound={sound}
+      voiceName={voiceName}
     />
   );
 }

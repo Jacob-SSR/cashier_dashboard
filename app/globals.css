@@ -115,360 +115,7 @@ body {
   line-height: 1.5;
 }
 
-/* ─── Header ─────────────────────────────────────────────── */
-.header {
-  background: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%);
-  padding: 0 28px;
-  height: 72px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 16px var(--shadow);
-  gap: 16px;
-}
-
-.header-brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex: 1;
-  min-width: 0;
-}
-
-.brand-icon {
-  width: 44px;
-  height: 44px;
-  background: rgba(255,255,255,0.30);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 22px;
-  flex-shrink: 0;
-  backdrop-filter: blur(4px);
-}
-
-.brand-text h1 {
-  font-size: 24px;
-  font-weight: 700;
-  color: #fff;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.18);
-  white-space: nowrap;
-}
-
-.brand-text p {
-  font-size: 15px;
-  color: rgba(255,255,255,0.80);
-  font-weight: 400;
-  white-space: nowrap;
-}
-
-.header-clock {
-  text-align: center;
-  flex-shrink: 0;
-}
-
-#clock {
-  font-size: 36px;
-  font-weight: 700;
-  color: #fff;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.04em;
-  text-shadow: 0 1px 8px rgba(0,0,0,0.20);
-  line-height: 1;
-}
-
-#clockDate {
-  font-size: 15px;
-  color: rgba(255,255,255,0.82);
-  font-weight: 400;
-  margin-top: 2px;
-}
-
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
-
-.theme-btn, .refresh-btn {
-  background: rgba(255,255,255,0.22);
-  border: 1px solid rgba(255,255,255,0.35);
-  color: #fff;
-  border-radius: 8px;
-  padding: 6px 12px;
-  font-family: var(--ff);
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.2s;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  white-space: nowrap;
-}
-
-.theme-btn:hover, .refresh-btn:hover {
-  background: rgba(255,255,255,0.35);
-}
-
-.last-update {
-  font-size: 11px;
-  color: rgba(255,255,255,0.75);
-  white-space: nowrap;
-}
-
-/* ─── Stats bar ───────────────────────────────────────────── */
-.stats-bar {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  padding: 18px 28px 0;
-}
-
-.stat-card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 16px 20px;
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 10px var(--shadow-card);
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.stat-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  flex-shrink: 0;
-}
-
-.stat-info { min-width: 0; }
-
-.stat-value {
-  font-size: 34px;
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--text);
-}
-
-.stat-label {
-  font-size: 15px;
-  color: var(--text-muted);
-  font-weight: 400;
-  margin-top: 2px;
-}
-
-.stat-wait   .stat-icon { background: var(--st-wait-bg);  color: var(--st-wait-text); }
-.stat-serve  .stat-icon { background: var(--st-serve-bg); color: var(--st-serve-text); }
-.stat-done   .stat-icon { background: var(--st-done-bg);  color: var(--st-done-text); }
-.stat-total  .stat-icon { background: var(--accent-dim);  color: var(--accent); }
-
-/* ─── Controls ────────────────────────────────────────────── */
-.controls {
-  padding: 14px 28px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.search-wrap {
-  position: relative;
-  flex: 1;
-  min-width: 200px;
-  max-width: 300px;
-}
-
-.search-wrap svg {
-  position: absolute;
-  left: 11px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-muted);
-  pointer-events: none;
-}
-
-.search-input {
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 12px 8px 34px;
-  font-family: var(--ff);
-  font-size: 14px;
-  color: var(--text);
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.search-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-dim);
-}
-
-.search-input::placeholder { color: var(--text-muted); }
-
-.filter-pills {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.pill {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 5px 14px;
-  font-family: var(--ff);
-  font-size: 13px;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.18s;
-  white-space: nowrap;
-}
-
-.pill:hover { border-color: var(--accent); color: var(--accent); }
-
-.pill.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  font-weight: 600;
-}
-
-.status-select {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 7px 12px;
-  font-family: var(--ff);
-  font-size: 14px;
-  color: var(--text);
-  cursor: pointer;
-  outline: none;
-}
-
-.status-select:focus { border-color: var(--accent); }
-
-/* ─── Table container ─────────────────────────────────────── */
-.table-wrap {
-  padding: 0 28px 28px;
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-  background: var(--surface);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  box-shadow: 0 2px 12px var(--shadow-card);
-  overflow: hidden;
-}
-
-thead th {
-  background: var(--surface-alt);
-  padding: 14px 16px;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-muted);
-  text-align: left;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  border-bottom: 1px solid var(--border);
-  white-space: nowrap;
-  user-select: none;
-  cursor: pointer;
-}
-
-thead th:first-child { border-radius: var(--radius) 0 0 0; }
-thead th:last-child  { border-radius: 0 var(--radius) 0 0; }
-
-thead th:hover { color: var(--accent); }
-
-tbody tr {
-  transition: background 0.15s;
-  cursor: default;
-}
-
-tbody tr:hover { background: var(--row-hover); }
-tbody tr.serving { background: var(--row-serving); }
-tbody tr.done    { background: var(--row-done); opacity: 0.82; }
-
-tbody tr.new-arrival {
-  animation: flashNew 1.6s ease-out;
-}
-
-@keyframes flashNew {
-  0%   { background: #FFF0B8; }
-  100% { background: transparent; }
-}
-
-tbody td {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: 17px;
-  vertical-align: middle;
-  white-space: nowrap;
-}
-
-tbody tr:last-child td { border-bottom: none; }
-
-.col-num    { color: var(--text-muted); font-size: 15px; font-variant-numeric: tabular-nums; }
-.col-time   { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text); }
-.col-vn     { font-variant-numeric: tabular-nums; font-size: 15px; color: var(--text-muted); }
-.col-hn     { font-variant-numeric: tabular-nums; font-size: 15px; color: var(--text-muted); }
-.col-name   { font-weight: 500; color: var(--text); max-width: 220px; }
-.col-amount { font-variant-numeric: tabular-nums; font-weight: 600; text-align: right; }
-
-/* ─── Department badge ────────────────────────────────────── */
-.dept-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border-radius: 20px;
-  padding: 5px 14px;
-  font-size: 15px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.dept-pharm  { background: var(--dept-pharm-bg);  color: var(--dept-pharm-text); }
-.dept-gen    { background: var(--dept-gen-bg);    color: var(--dept-gen-text); }
-.dept-dental { background: var(--dept-dental-bg); color: var(--dept-dental-text); }
-.dept-er     { background: var(--dept-er-bg);     color: var(--dept-er-text); }
-.dept-med    { background: var(--dept-med-bg);    color: var(--dept-med-text); }
-.dept-peds   { background: var(--dept-peds-bg);   color: var(--dept-peds-text); }
-.dept-ob     { background: var(--dept-ob-bg);     color: var(--dept-ob-text); }
-.dept-ortho  { background: var(--dept-ortho-bg);  color: var(--dept-ortho-text); }
-
-/* ─── Status badge ────────────────────────────────────────── */
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border-radius: 20px;
-  padding: 5px 14px;
-  font-size: 15px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-.status-wait  { background: var(--st-wait-bg);  color: var(--st-wait-text); }
-.status-serve { background: var(--st-serve-bg); color: var(--st-serve-text); }
-.status-done  { background: var(--st-done-bg);  color: var(--st-done-text); }
-
+/* ─── จุดกะพริบ (ป้าย "เชิญชำระเงิน") ─────────────────────── */
 .pulse-dot {
   width: 7px;
   height: 7px;
@@ -480,263 +127,113 @@ tbody tr:last-child td { border-bottom: none; }
 
 @keyframes pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.5; transform: scale(0.75); }
-}
-
-/* ─── Action button ───────────────────────────────────────── */
-.action-btn {
-  background: none;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 6px 14px;
-  font-family: var(--ff);
-  font-size: 15px;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.18s;
-}
-
-.action-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-dim);
-}
-
-.call-btn {
-  background: none;
-  border: 1px solid #B8D8F5;
-  border-radius: var(--radius-sm);
-  padding: 6px 14px;
-  font-family: var(--ff);
-  font-size: 15px;
-  color: #1A3D5C;
-  cursor: pointer;
-  transition: all 0.18s;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-:root[data-theme="dark"] .call-btn { border-color: #1A2E42; color: #80C8F0; }
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .call-btn { border-color: #1A2E42; color: #80C8F0; }
-  :root:not([data-theme="light"]) .call-btn:hover { background: #1A2E42; border-color: #2A4E62; color: #80C8F0; }
-}
-
-.call-btn:hover {
-  background: #B8D8F5;
-  border-color: #80B8E8;
-  color: #1A3D5C;
-}
-
-.call-btn.calling {
-  background: #1A7FCC;
-  border-color: #1A7FCC;
-  color: #fff;
-  animation: callPulse 0.7s ease-in-out infinite alternate;
-}
-
-@keyframes callPulse {
-  from { box-shadow: 0 0 0 0 rgba(26,127,204,0.5); }
-  to   { box-shadow: 0 0 0 6px rgba(26,127,204,0); }
-}
-
-tbody tr.calling-row td { background: #EFF7FF; }
-:root[data-theme="dark"] tbody tr.calling-row td { background: #0A1E2E; }
-
-/* ─── Call toast ─────────────────────────────────────── */
-.call-toast {
-  position: fixed;
-  top: 82px;
-  left: 50%;
-  transform: translateX(-50%) translateY(-12px);
-  background: linear-gradient(135deg, #1A7FCC, #2E50CC);
-  color: #fff;
-  border-radius: 14px;
-  padding: 12px 24px;
-  font-size: 16px;
-  font-weight: 600;
-  font-family: var(--ff);
-  box-shadow: 0 8px 32px rgba(26,80,204,0.35);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 200;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s, transform 0.25s;
-  white-space: nowrap;
-  max-width: 90vw;
-}
-
-.call-toast.visible {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-.call-toast-icon {
-  font-size: 22px;
-  animation: speakerWave 0.5s ease-in-out infinite alternate;
-}
-
-@keyframes speakerWave {
-  from { transform: scale(1); }
-  to   { transform: scale(1.2); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .call-btn.calling { animation: none; }
-  .call-toast-icon  { animation: none; }
-}
-
-/* ─── Footer ──────────────────────────────────────────────── */
-.table-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  background: var(--surface-alt);
-  border-top: 1px solid var(--border);
-  border-radius: 0 0 var(--radius) var(--radius);
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* ─── Empty state ─────────────────────────────────────────── */
-.empty-state {
-  padding: 48px 20px;
-  text-align: center;
-  color: var(--text-muted);
-}
-
-.empty-state svg { opacity: 0.35; margin-bottom: 12px; }
-.empty-state p   { font-size: 14px; }
-
-/* ─── Responsive guard ────────────────────────────────────── */
-@media (max-width: 900px) {
-  .stats-bar { grid-template-columns: repeat(2, 1fr); }
-  .header-actions .last-update { display: none; }
-}
-
-@media (max-width: 600px) {
-  .stats-bar { grid-template-columns: 1fr 1fr; padding: 12px 14px 0; }
-  .controls { padding: 10px 14px; }
-  .table-wrap { padding: 0 14px 14px; }
-  .header { padding: 0 14px; }
-  #clock { font-size: 22px; }
-  .brand-text h1 { font-size: 15px; }
+  50%      { opacity: 0.5; transform: scale(0.75); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pulse-dot { animation: none; }
-  tbody tr.new-arrival { animation: none; }
 }
 
-/* ─── แถบเตือน (โหมดสาธิต / เชื่อมต่อไม่ได้) ─────────────── */
-.banner {
-  margin: 14px 28px 0;
-  padding: 10px 16px;
-  border-radius: var(--radius-sm);
-  background: var(--st-wait-bg);
-  color: var(--st-wait-text);
-  font-size: 15px;
-  font-weight: 500;
+/* ─── แถบชวนแตะเปิดเสียง (ขึ้นครั้งเดียวตอนเปิดจอ) ────────── */
+/* เบราว์เซอร์ห้ามเล่นเสียงจนกว่าหน้าเว็บจะเคยถูกแตะ 1 ครั้ง
+   ถ้าไม่อยากให้ขึ้นแถบนี้เลย เปิด Chrome ด้วย
+   --autoplay-policy=no-user-gesture-required (ดู README) */
+.tv-unlock {
+  /* เป็นแถบจริงในหน้า ไม่ลอยทับแถวคิว (ขึ้นแค่ตอนยังไม่ได้แตะเปิดเสียง) */
+  flex-shrink: 0;
+  text-align: center;
+  background: #12312A;
+  color: #fff;
+  padding: 1.2vh 3vh;
+  font-size: 2.4vh;
+  font-weight: 600;
 }
 
-/* ─── จอแสดงผลเรียกชื่อ (/display) ───────────────────────── */
+/* ─── จอเรียกชื่อเต็มจอ (/display) ─────────────────────────
+   ใช้โทนเขียวมิ้นชุดเดียวกับจอคิว (เป็นจอให้คนไข้ดูเหมือนกัน)
+   ตั้งสีไว้ครบในบล็อกนี้ จึงไม่เปลี่ยนตามธีมมืด/สว่างของเบราว์เซอร์ */
 .display-screen {
+  --tv-accent: #0E8A63;
+  --tv-muted:  #5E8B7C;
+  --tv-text:   #12312A;
+
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 28px;
-  padding: 40px;
+  gap: 4vh;
+  padding: 5vh;
   text-align: center;
-  background: linear-gradient(135deg, var(--header-from) 0%, var(--header-to) 100%);
+  background: linear-gradient(135deg, #7FD9B4 0%, #56C9C4 100%);
   color: #fff;
 }
 
 .display-hosp {
-  font-size: 30px;
+  font-size: 4vh;
   font-weight: 600;
-  opacity: 0.9;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.2);
+  opacity: 0.95;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
 }
 
 .display-card {
-  background: rgba(255, 255, 255, 0.94);
-  color: var(--text);
-  border-radius: 28px;
-  padding: 52px 72px;
-  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.18);
-  max-width: min(1100px, 92vw);
+  background: #fff;
+  color: var(--tv-text);
+  border-radius: 4vh;
+  padding: 6vh 8vh;
+  box-shadow: 0 2vh 6vh rgba(0, 0, 0, 0.16);
+  max-width: min(1400px, 92vw);
+}
+
+.display-queue {
+  display: inline-block;
+  background: var(--tv-accent);
+  color: #fff;
+  border-radius: 10vh;
+  padding: 0.8vh 3vh;
+  font-size: 3.6vh;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 2vh;
 }
 
 .display-lead {
-  font-size: 34px;
-  color: var(--text-muted);
+  font-size: 4.4vh;
+  color: var(--tv-muted);
   font-weight: 500;
 }
 
 .display-name {
-  font-size: clamp(48px, 8vw, 104px);
+  font-size: clamp(48px, 11vh, 160px);
   font-weight: 700;
   line-height: 1.15;
-  margin: 18px 0 22px;
+  margin: 2.5vh 0 3vh;
   word-break: break-word;
 }
 
 .display-meta {
   display: flex;
-  gap: 16px;
+  gap: 3vh;
   justify-content: center;
   flex-wrap: wrap;
-  font-size: 26px;
-  color: var(--text-muted);
+  font-size: 3.4vh;
+  color: var(--tv-muted);
   font-variant-numeric: tabular-nums;
 }
 
 .display-where {
-  font-size: clamp(30px, 4vw, 52px);
+  font-size: clamp(30px, 6vh, 84px);
   font-weight: 700;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.22);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
 }
 
 .display-idle {
-  font-size: clamp(28px, 4vw, 48px);
+  font-size: clamp(28px, 5vh, 70px);
   font-weight: 600;
-  opacity: 0.92;
+  opacity: 0.95;
 }
 
-/* ─── คอลัมน์ "ไปต่อ" (เส้นทางตาม flow หลังชำระเงิน) ───── */
-.col-route { white-space: nowrap; }
-
-.route-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  border-radius: 20px;
-  padding: 5px 12px;
-  font-size: 14px;
-  font-weight: 600;
-  background: var(--st-done-bg);
-  color: var(--st-done-text);
-}
-
-.route-badge.route-drug {
-  background: var(--dept-pharm-bg);
-  color: var(--dept-pharm-text);
-}
-
-.route-next {
-  margin-top: 3px;
-  font-size: 12px;
-  color: var(--text-muted);
-}
-
-/* ═══ จอ TV หน้าห้องเก็บเงิน (/tv) ═══════════════════════════════════════════
+/* ═══ จอคิวสำหรับคนไข้ (หน้าแรก /) ═══════════════════════════════════════════
    ออกแบบที่ 55 นิ้ว / 1080p ดูจากระยะ 4–6 เมตร
    - โทนเขียวมิ้น: ตั้ง token ทับทั้งชุดบน .tv จอ TV จึงเป็นสีเดียวเสมอ
      ไม่เปลี่ยนตามธีมมืด/สว่างของเบราว์เซอร์ที่เสียบกับทีวี
@@ -757,7 +254,7 @@ tbody tr.calling-row td { background: #EFF7FF; }
   --tv-serving-bg:  #CFF3E4;
 
   --tv-pad: 2.2vw;
-  --tv-gap: 1vh;
+  --tv-gap: 0.7vh;
 
   height: 100vh;
   display: flex;
@@ -770,7 +267,7 @@ tbody tr.calling-row td { background: #EFF7FF; }
 /* ─── หัวจอ ─────────────────────────────────────────────── */
 .tv-header {
   flex-shrink: 0;
-  height: 12vh;
+  height: 10.5vh;
   padding: 0 var(--tv-pad);
   display: flex;
   align-items: center;
@@ -802,9 +299,9 @@ tbody tr.calling-row td { background: #EFF7FF; }
 }
 
 .tv-title h1 {
-  font-size: 5.4vh;
+  font-size: 5.8vh;
   font-weight: 700;
-  line-height: 1.1;
+  line-height: 1.35;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
   white-space: nowrap;
 }
@@ -854,7 +351,7 @@ tbody tr.calling-row td { background: #EFF7FF; }
   flex: 1;
   display: flex;
   gap: 1.4vw;
-  padding: 1.6vh var(--tv-pad);
+  padding: 1vh var(--tv-pad);
   min-height: 0;
 }
 
@@ -862,6 +359,10 @@ tbody tr.calling-row td { background: #EFF7FF; }
 .tv-column {
   flex: 1 1 0;
   min-width: 0;
+  /* ต้องมี min-height: 0 ไม่งั้น flex ไม่ยอมย่อคอลัมน์ให้เล็กกว่าเนื้อหา
+     แล้วแถวจะล้นทะลุกรอบการ์ดออกมา (เคยเป็นมาแล้ว) */
+  min-height: 0;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   gap: var(--tv-gap);
@@ -877,7 +378,8 @@ tbody tr.calling-row td { background: #EFF7FF; }
   flex: 1 1 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: 9.5vh minmax(0, 1fr) auto;
+  grid-template-columns: 11vh minmax(0, 1fr) auto;
+  /* 3 ช่อง: เลขคิว | ชื่อ+เวลา+แผนก | สถานะ (ตัดยอดเงินออกแล้ว) */
   align-items: center;
   gap: 1.4vh;
   padding: 0 2vh;
@@ -899,26 +401,39 @@ tbody tr.calling-row td { background: #EFF7FF; }
 }
 
 .tv-seq {
-  font-size: 5.2vh;
-  font-weight: 700;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   line-height: 1;
-  text-align: center;
   color: var(--tv-muted);
+}
+
+.tv-seq-label {
+  font-size: 1.5vh;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  opacity: 0.75;
+}
+
+.tv-seq-no {
+  font-size: 4vh;
+  font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
-.tv-row-serving .tv-seq {
-  color: var(--tv-accent);
-}
+.tv-row-serving .tv-seq { color: var(--tv-accent); }
 
 .tv-main {
   min-width: 0;
 }
 
 .tv-name {
-  font-size: 4.4vh;
+  font-size: 4.1vh;
   font-weight: 700;
-  line-height: 1.2;
+  /* ไทยมีสระบน+วรรณยุกต์ซ้อนกัน line-height ต่ำกว่า 1.35 จะโดนเฉือนหัว */
+  line-height: 1.4;
+  padding-block: 0.2vh;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -928,46 +443,62 @@ tbody tr.calling-row td { background: #EFF7FF; }
   display: flex;
   align-items: center;
   gap: 1vh;
-  margin-top: 0.4vh;
-  font-size: 2.6vh;
+  margin-top: 0.2vh;
+  font-size: 2.5vh;
+  line-height: 1.4;
   color: var(--tv-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.tv-meta-time {
+/* แถวที่ถูกเรียกมีป้าย "เชิญชำระเงิน" กว้างกว่า บรรทัดล่างจึงถูกบีบ
+   ให้ชื่อแผนกย่อด้วย ... แทนที่จะโดนตัดกลางคำ */
+.tv-meta > * { flex-shrink: 0; }
+
+.tv-meta .tv-meta-time {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
+/* ── ฝั่งขวาของแถว: "ที่ N" ตัวเด่น + เวลารอตัวเล็ก ──
+   คนไข้ยืนดูจากท้ายห้องอยากรู้ 2 อย่าง "อีกกี่คิว" กับ "รอมานานแค่ไหน" */
 .tv-right {
-  text-align: right;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.3vh;
+  line-height: 1.25;
 }
 
-.tv-amount {
-  font-size: 4.4vh;
+.tv-turn {
+  font-size: 2.5vh;
   font-weight: 700;
-  line-height: 1.1;
+  color: var(--tv-accent);
+  background: var(--tv-accent-dim);
+  border-radius: 10vh;
+  padding: 0.4vh 1.6vh;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-.tv-amount span {
-  font-size: 2.8vh;
-  font-weight: 500;
+.tv-waited {
+  font-size: 1.9vh;
   color: var(--tv-muted);
-  margin-left: 0.4vh;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
+
 
 .tv-status {
   display: inline-flex;
   align-items: center;
-  gap: 0.8vh;
-  margin-top: 0.6vh;
+  gap: 1vh;
   border-radius: 10vh;
-  padding: 0.5vh 1.6vh;
-  font-size: 2.4vh;
+  padding: 0.8vh 1.8vh;
+  font-size: 2.7vh;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -1021,7 +552,310 @@ tbody tr.calling-row td { background: #EFF7FF; }
   color: var(--tv-muted);
 }
 
-.tv-route-drug {
-  color: var(--tv-accent);
-  font-weight: 600;
+
+
+/* ─── ยังไม่มีคิว (เช่นตอนเช้า ก่อนใครจะถึงห้องเก็บเงิน) ───── */
+.tv-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2vh;
+  color: var(--tv-muted);
+  text-align: center;
 }
+
+.tv-empty-icon { font-size: 14vh; line-height: 1; opacity: 0.6; }
+.tv-empty-title { font-size: 6vh; font-weight: 700; color: var(--tv-text); }
+.tv-empty-sub { font-size: 3vh; }
+
+/* ═══ ส่วน "เรียกคิว" — แยกจาก "คิวรอ" เหมือนจอเดิมของ รพ. ═══════════════ */
+.tv-section-label {
+  flex-shrink: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 1.4vh;
+  padding: 0.4vh var(--tv-pad);
+  font-size: 2.4vh;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #fff;
+  background: var(--tv-accent);
+}
+
+/* ข้อความช่วยบอกคนไข้ว่าต้องทำอะไร — จอเดิมไม่มี ทำให้คนนั่งงงว่าเรียกแล้วไปไหน */
+.tv-section-hint {
+  font-size: 1.9vh;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.tv-section-label-wait {
+  background: var(--tv-surface-alt);
+  color: var(--tv-muted);
+  border-top: 1px solid var(--tv-border);
+  border-bottom: 1px solid var(--tv-border);
+}
+
+.tv-section-count {
+  font-size: 1.9vh;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--tv-accent);
+  background: var(--tv-accent-dim);
+  border-radius: 10vh;
+  padding: 0.1vh 1.2vh;
+}
+
+.tv-calling {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tv-calling-list {
+  padding: 0.7vh var(--tv-pad);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8vh;
+}
+
+/* แถวเรียกคิว — เด่นสุดบนจอ */
+.tv-calling-row {
+  display: grid;
+  grid-template-columns: 14vh minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2vh;
+  padding: 1vh 2vh 1vh 3.2vh;
+  border-radius: 1.8vh;
+  background: var(--tv-serving-bg);
+  border: 1px solid var(--tv-accent);
+  box-shadow: inset 1.2vh 0 0 var(--tv-accent);
+}
+
+/* แถวบนสุด = คนที่เพิ่งถูกเรียก ต้องดึงสายตาให้ได้จากท้ายห้อง
+   ใช้ทั้ง "เลื่อนเข้า" ตอนเปลี่ยนคน และ "เรืองแสงเป็นจังหวะ" ตลอดเวลาที่ยังเรียกอยู่
+   (React ใช้ key = id ของแถว พอคนเปลี่ยน element ใหม่ animation จึงเล่นเองรอบหนึ่ง) */
+.tv-calling-row:not(.tv-calling-row-prev) {
+  animation:
+    tv-call-in 0.45s ease-out,
+    tv-call-glow 2.4s ease-in-out 0.45s infinite;
+}
+
+@keyframes tv-call-in {
+  from { opacity: 0; transform: translateX(-3vh); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes tv-call-glow {
+  0%, 100% { box-shadow: inset 1.2vh 0 0 var(--tv-accent), 0 0 0 0 rgba(14, 138, 99, 0); }
+  50%      { box-shadow: inset 1.2vh 0 0 var(--tv-accent), 0 0 0 0.8vh rgba(14, 138, 99, 0.16); }
+}
+
+/* เคารพการตั้งค่า "ลดการเคลื่อนไหว" ของระบบ — บางคนดูแล้วเวียนหัว */
+@media (prefers-reduced-motion: reduce) {
+  .tv-calling-row:not(.tv-calling-row-prev) { animation: none; }
+  .pulse-dot { animation: none; }
+}
+
+.tv-calling-main { min-width: 0; }
+
+.tv-calling-meta {
+  display: flex;
+  align-items: center;
+  gap: 1vh;
+  margin-top: 0.2vh;
+  font-size: 2.7vh;
+  line-height: 1.4;
+  color: var(--tv-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-calling-meta > * { flex-shrink: 0; }
+.tv-calling-meta .tv-meta-dept {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-calling-seq {
+  font-size: 5.2vh;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+  color: var(--tv-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tv-calling-seq { color: var(--tv-accent); }
+
+.tv-calling-name {
+  font-size: 4.8vh;
+  font-weight: 700;
+  line-height: 1.4;
+  padding-block: 0.2vh;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tv-calling-at {
+  display: inline-flex;
+  align-items: center;
+  gap: 1vh;
+  flex-shrink: 0;
+  border-radius: 10vh;
+  padding: 1vh 2.4vh;
+  font-size: 2.7vh;
+  font-weight: 700;
+}
+
+.tv-calling-at {
+  background: var(--tv-accent);
+  color: #fff;
+}
+
+.tv-calling-row .pulse-dot {
+  background: #fff;
+  width: 1.4vh;
+  height: 1.4vh;
+}
+
+/* แถวที่สองของ "เรียกคิว" — คนที่เรียกไปแล้วก่อนหน้า (จอเดิมโชว์ 2 คน) */
+.tv-calling-row-prev {
+  background: var(--tv-card-bg);
+  border-color: var(--tv-border);
+  box-shadow: inset 1.2vh 0 0 var(--tv-border);
+  opacity: 0.85;
+}
+.tv-calling-row-prev .tv-calling-seq { color: var(--tv-muted); }
+.tv-calling-row-prev { padding-block: 0.5vh; }
+.tv-calling-row-prev .tv-calling-seq { font-size: 4.2vh; }
+.tv-calling-row-prev .tv-calling-name { font-size: 3.4vh; }
+.tv-calling-row-prev .tv-calling-meta { font-size: 2.1vh; }
+.tv-calling-row-prev .tv-calling-at {
+  background: transparent;
+  color: var(--tv-muted);
+  border: 1px solid var(--tv-border);
+  font-size: 2.3vh;
+}
+
+/* ─── /voices — หน้าเช็กเสียงของเครื่องที่ต่อจอ (ไม่ใช่หน้าจอ TV) ───────── */
+.vx {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+  line-height: 1.6;
+}
+.vx h1 { font-size: 28px; margin-bottom: 6px; }
+.vx h2 { font-size: 20px; margin: 28px 0 8px; }
+.vx-sub { color: var(--text-muted); font-size: 15px; margin-bottom: 20px; }
+.vx-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  margin-bottom: 8px;
+}
+.vx-box label { display: block; font-weight: 600; margin-bottom: 6px; }
+.vx-box input {
+  width: 100%;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  color: var(--text);
+}
+.vx-box p { margin: 10px 0; }
+.vx ul { list-style: none; }
+.vx li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.vx button {
+  font: inherit;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  flex-shrink: 0;
+}
+.vx-name { font-weight: 600; }
+.vx-lang { color: var(--text-muted); font-size: 14px; }
+.vx-tag {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: var(--st-serve-bg);
+  color: var(--st-serve-text);
+}
+.vx-none, .vx-warn { color: #C0392B; }
+.vx-warn {
+  background: var(--st-wait-bg);
+  color: var(--st-wait-text);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+}
+.vx details { margin-top: 24px; }
+.vx summary { cursor: pointer; color: var(--text-muted); }
+.vx code {
+  background: var(--surface-alt);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* ─── ไอคอน SVG (แทน emoji) ─────────────────────────────────
+   ขนาดผูกกับ font-size ของข้อความรอบตัว จึงโตตามเองทุกจุด
+   vertical-align กับ translateY ทำให้เส้นกลางไอคอนตรงกับกลางตัวอักษรไทยพอดี
+   (ถ้าไม่ปรับ ไอคอนจะลอยสูงกว่าข้อความเล็กน้อย เห็นชัดบนจอ 55") */
+.icon {
+  display: inline-block;
+  vertical-align: -0.14em;
+  flex-shrink: 0;
+}
+
+/* หัวจอ: ไอคอนอยู่ในวงกลมโปร่ง จัดกึ่งกลางด้วย flex ไม่ต้องพึ่ง baseline */
+.tv-title-icon .icon { vertical-align: 0; font-size: 4.4vh; }
+
+/* ตอนไม่มีคิว: ไอคอนใหญ่กลางจอ */
+.tv-empty-icon .icon { vertical-align: 0; }
+
+/* ป้ายกำกับหน้าตัวเลข/ชื่อแผนก ("ส่งมา" "จาก" "เรียก" "ไปที่")
+   จางกว่าค่าจริงเล็กน้อย — ตาจับ "ค่า" ก่อน แล้วค่อยอ่าน "ป้าย" เมื่อสงสัย
+   ไม่งั้นป้ายจะไปแย่งความสนใจจากข้อมูลที่คนไข้ต้องการจริง ๆ */
+.tv-meta-label {
+  font-weight: 400;
+  opacity: 0.72;
+  margin-right: 0.15em;
+}
+
+/* ไอคอนแผนกในบรรทัดข้อมูลย่อย
+   ใหญ่กว่าตัวอักษรเล็กน้อย (1.15em) เพราะรูปทรงล้วน ๆ ต้องการพื้นที่มากกว่าตัวหนังสือ
+   ถึงจะอ่านออกจากระยะ 4–6 เมตร */
+.tv-meta .icon,
+.tv-calling-meta .icon {
+  font-size: 1.15em;
+  margin-right: 0.3em;
+}
+
+/* ชื่อแผนกกับไอคอนต้องอยู่บรรทัดเดียวกันเสมอ ไม่ตัดคำกลางคัน */
+.tv-meta-dept,
+.tv-calling-meta .tv-meta-dept {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ปุ่มฟังเสียงในหน้า /voices */
+.vx button .icon { vertical-align: -0.1em; }

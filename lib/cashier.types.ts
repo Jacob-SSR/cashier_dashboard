@@ -1,9 +1,12 @@
 // lib/cashier.types.ts
-// type ที่ใช้ร่วมกันระหว่าง server (service/route) และ client (คอมโพเนนต์ dashboard)
+// type ที่ใช้ร่วมกันระหว่าง server (service/route) และ client (คอมโพเนนต์จอ)
 // แยกไว้ไฟล์เดียวเพื่อให้ฝั่ง client import type ได้โดยไม่ลาก mysql2 เข้า bundle
 
-/** สถานะคิวชำระเงิน — ตรงกับป้ายสถานะบนหน้าจอ */
-export type CashierStatus = "รอชำระ" | "กำลังชำระ" | "ชำระแล้ว";
+/**
+ * สถานะคิวชำระเงิน — ตัดสินจากยอดเงินอย่างเดียว
+ * ส่วน "ใครถึงคิว" ดูที่ BoardRow.isCalling (หัวแถวของ oqueue) ไม่ใช่ที่นี่
+ */
+export type CashierStatus = "รอชำระ" | "ชำระแล้ว";
 
 /**
  * เส้นทางหลังพบแพทย์ ตาม flow ผู้ป่วยนอก
@@ -12,16 +15,23 @@ export type CashierStatus = "รอชำระ" | "กำลังชำระ"
  */
 export type CashierRoute = "มียา" | "ไม่มียา";
 
-/** 1 แถว = 1 visit (VN) ที่ถูกส่งมาห้องเก็บเงิน */
+/**
+ * 1 แถวดิบจากฐานข้อมูล — มี VN/HN
+ * ⚠️ ใช้ภายใน server เท่านั้น ไม่เคยถูกส่งออกทาง API
+ *    ทุกจอในระบบนี้เป็นจอสาธารณะให้คนไข้ดู จึงไม่ส่งข้อมูลระบุตัวตนลงเบราว์เซอร์
+ */
 export interface CashierRow {
-  /** ใช้ vn เป็น key ของแถว (unique ต่อวัน) */
   id: string;
   vn: string;
   hn: string;
+  /** เลขคิวจริงจาก HOSxP (ovst.oqueue) — เลขเดียวกับที่จอคิวเดิมใช้ */
+  queueNo: string;
+  /** ovst.pt_priority — มากกว่า = ถูกเรียกก่อน (ผู้สูงอายุ/พระ/ฉุกเฉิน) */
+  priority: number;
   name: string;
-  /** ชื่อแผนกที่ส่งผู้ป่วยมา (kskdepartment.department) */
+  /** ชื่อแผนกที่ส่งผู้ป่วยมา (kskdepartment.department) เช่น ห้องยา / ทันตกรรม */
   dept: string;
-  /** เวลาส่ง HH:MM */
+  /** เวลาที่ถูกส่งมาห้องการเงิน HH:MM */
   time: string;
   status: CashierStatus;
   route: CashierRoute;
@@ -31,7 +41,10 @@ export interface CashierRow {
   amount: number;
 }
 
-/** payload ที่ /api/cashier ส่งกลับ */
+/**
+ * ชุดข้อมูลดิบของทั้งวัน — ใช้ภายใน server เท่านั้น (มี VN/HN)
+ * จอต่าง ๆ กินผลลัพธ์ที่กรองแล้วอย่าง BoardData / CallData แทน
+ */
 export interface CashierData {
   updatedAt: string;
   /** วันที่ของข้อมูล (YYYY-MM-DD ค.ศ.) */
@@ -41,7 +54,6 @@ export interface CashierData {
   rows: CashierRow[];
   summary: {
     wait: number;
-    serving: number;
     done: number;
     total: number;
     /** ยอดรวมที่ยังค้างชำระ (รอชำระ + กำลังชำระ) */
@@ -49,28 +61,55 @@ export interface CashierData {
   };
 }
 
-/** 1 แถวบนจอ TV — ไม่มี VN/HN และนามสกุลถูกปิดบังแล้ว */
-export interface TvRow {
-  /** ลำดับคิวบนจอ (ไม่ใช่ vn — จอ TV ไม่ส่งข้อมูลระบุตัวตนออกไป) */
+/** 1 แถวบนจอคิว — ไม่มี VN/HN และนามสกุลถูกปิดบังแล้ว */
+export interface BoardRow {
   id: string;
+  /** เลขคิวจริงจาก HOSxP (ovst.oqueue) — ว่างถ้า visit นั้นไม่มีเลขคิว */
+  queueNo: string;
   name: string;
   dept: string;
   time: string;
-  status: CashierStatus;
   /** มียา = จ่ายเงินแล้วต้องกลับไปรับยาที่ห้องยา */
   route: CashierRoute;
   amount: number;
+  /** คิวที่ถึงตาแล้ว (หัวแถว) — จอจะไฮไลต์ให้เด่น */
+  isCalling: boolean;
 }
 
-/** payload ที่ /api/cashier/tv ส่งกลับ */
-export interface TvData {
+/** payload ที่ /api/queue ส่งกลับ (จอคิว) */
+export interface BoardData {
   updatedAt: string;
   date: string;
   source: "hosxp" | "demo";
-  /** คิวที่แสดงบนจอ (สูงสุดตาม TV_ROWS) */
-  rows: TvRow[];
-  /** จำนวนที่ยังไม่ชำระทั้งหมด (รวมคนที่ยังไม่ขึ้นจอ) */
+  /** "คิวรอ" — คนที่ยังไม่ถูกเรียก (สูงสุดตาม BOARD_ROWS) */
+  rows: BoardRow[];
+  /**
+   * "เรียกคิว" — คนที่ห้องเก็บเงินกดเรียกล่าสุด (ใหม่สุดอยู่หน้า, จอเดิมโชว์ 2 คน)
+   * มาจากตาราง sd_queue_calling จึงเป็นคนละชุดกับ rows ไม่ซ้ำกัน
+   */
+  called: BoardRow[];
+  /** จำนวนที่ยังไม่ถูกเรียกทั้งหมด (รวมคนที่ยังไม่ขึ้นจอ) */
   waiting: number;
-  /** ชำระเสร็จแล้ววันนี้ */
+  /** ถูกเรียกไปแล้ววันนี้ */
   done: number;
+}
+
+/**
+ * คิวสำหรับ "ประกาศเรียกชื่อ" — ใช้ชื่อเต็มเพราะต้องอ่านออกเสียง
+ * ไม่มี VN/HN เช่นกัน และ key เป็นค่า hash ไว้ให้ client เทียบว่าเป็นคนใหม่หรือไม่
+ */
+export interface CallRow {
+  key: string;
+  queueNo: string;
+  name: string;
+  dept: string;
+  amount: number;
+}
+
+/** payload ที่ /api/queue/call ส่งกลับ */
+export interface CallData {
+  updatedAt: string;
+  /** คนที่ถึงคิวตอนนี้ (หัวแถว) — null ถ้าไม่มีใครรอ */
+  calling: CallRow | null;
+  waiting: number;
 }
