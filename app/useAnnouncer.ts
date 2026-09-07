@@ -26,6 +26,10 @@ interface Options {
   buildAnnouncement: (name: string) => string;
   /** ชื่อเสียงที่อยากใช้ (TTS_VOICE / ?voice=) — ใส่แค่บางส่วนของชื่อก็ได้ */
   voiceName?: string;
+  /** ความเร็ว 1.0 = ปกติ — จอ รพ. ตั้ง 0.7 ให้ผู้สูงอายุฟังทัน */
+  rate?: number;
+  /** ระดับเสียงสูง-ต่ำ 1.0 = ปกติ */
+  pitch?: number;
 }
 
 export function useAnnouncer({
@@ -33,6 +37,8 @@ export function useAnnouncer({
   refreshSeconds,
   buildAnnouncement,
   voiceName,
+  rate = 0.7,
+  pitch = 1,
 }: Options) {
   const [calling, setCalling] = useState<CallData["calling"]>(null);
   const [needsUnlock, setNeedsUnlock] = useState(false);
@@ -48,8 +54,9 @@ export function useAnnouncer({
       const synth = window.speechSynthesis;
       const u = new SpeechSynthesisUtterance(buildAnnouncement(name));
       u.lang = "th-TH";
-      u.rate = 0.88;
-      u.pitch = 1.05;
+      // จำกัดช่วงที่เบราว์เซอร์รับได้ กันค่าพิมพ์ผิดใน .env ทำให้เสียงเพี้ยนหรือเงียบ
+      u.rate = Math.min(2, Math.max(0.5, rate));
+      u.pitch = Math.min(2, Math.max(0, pitch));
       u.volume = 1;
 
       const voice = pickVoice(synth.getVoices(), voiceName);
@@ -64,7 +71,7 @@ export function useAnnouncer({
       //    ปล่อยให้ต่อคิวพูดเองตามลำดับที่ถูกเรียกจริง
       synth.speak(u);
     },
-    [buildAnnouncement, voiceName],
+    [buildAnnouncement, voiceName, rate, pitch],
   );
 
   const poll = useCallback(async () => {

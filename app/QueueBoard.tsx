@@ -24,6 +24,14 @@ interface Props {
   sound: boolean;
   /** ชื่อเสียงที่ใช้ประกาศ (TTS_VOICE / ?voice=) */
   voiceName: string;
+  /** ความเร็วเสียง 1.0 = ปกติ, ต่ำกว่านั้น = ช้าลง (TTS_RATE / ?rate=) */
+  ttsRate: number;
+  /** ระดับเสียงสูง-ต่ำ (TTS_PITCH / ?pitch=) */
+  ttsPitch: number;
+  /** พูดกี่รอบต่อการเรียก 1 ครั้ง (TTS_REPEAT / ?repeat=) */
+  ttsRepeat: number;
+  /** ข้อความประกาศ ใช้ {ชื่อ} แทนตำแหน่งชื่อคนไข้ (TTS_TEXT / ?say=) */
+  ttsText: string;
 }
 
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
@@ -64,6 +72,10 @@ export default function QueueBoard({
   refreshSeconds,
   sound,
   voiceName,
+  ttsRate,
+  ttsPitch,
+  ttsRepeat,
+  ttsText,
 }: Props) {
   const [data, setData] = useState<BoardData>(initialData);
   const [clock, setClock] = useState("");
@@ -72,11 +84,19 @@ export default function QueueBoard({
   const [now, setNow] = useState<Date | null>(null);
   const [offline, setOffline] = useState(false);
 
+  /**
+   * ประกอบประโยคที่จะให้เสียงอ่าน
+   *
+   * เว้นจังหวะด้วยจุดไข่ปลา — เครื่องอ่านจะหยุดหายใจตรงนั้น ทำให้แต่ละรอบ
+   * ไม่ติดกันเป็นพรืด คนไข้ที่นั่งอยู่ไกลจับใจความได้ทัน
+   * ปรับข้อความ/จำนวนรอบได้ที่ TTS_TEXT / TTS_REPEAT ใน .env
+   */
   const buildAnnouncement = useCallback(
-    (name: string) =>
-      `เชิญ ${name} ชำระเงินที่ห้องเก็บเงิน . . ` +
-      `เชิญ ${name} ชำระเงินที่ห้องเก็บเงิน . . เชิญ ${name} ค่ะ`,
-    [],
+    (name: string) => {
+      const line = ttsText.replaceAll("{ชื่อ}", name).replaceAll("{name}", name);
+      return Array(ttsRepeat).fill(line).join(" . . . ");
+    },
+    [ttsText, ttsRepeat],
   );
 
   // ประกาศชื่อคนที่ถึงคิวเอง ไม่ต้องมีใครกด
@@ -85,6 +105,8 @@ export default function QueueBoard({
     refreshSeconds,
     buildAnnouncement,
     voiceName,
+    rate: ttsRate,
+    pitch: ttsPitch,
   });
 
   useEffect(() => {

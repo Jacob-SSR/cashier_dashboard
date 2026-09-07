@@ -26,6 +26,24 @@ export default async function Page({
   const voiceParam = Array.isArray(sp.voice) ? sp.voice[0] : sp.voice;
   const voiceName = voiceParam || process.env.TTS_VOICE || "Siri";
 
+  // ── ปรับเสียงประกาศได้จาก .env โดยไม่ต้องแก้โค้ด ──────────────────────
+  // ลองสดบนจอก่อนได้ด้วย query string เช่น  /?rate=0.6&repeat=3
+  const numParam = (key: string, envVal: string | undefined, fallback: number) => {
+    const raw = Array.isArray(sp[key]) ? sp[key][0] : sp[key];
+    const n = Number(raw ?? envVal ?? fallback);
+    return Number.isFinite(n) ? n : fallback;
+  };
+
+  // 0.7 = ช้ากว่าปกติพอให้คนสูงอายุฟังทัน (1.0 = ความเร็วปกติของเสียงนั้น)
+  const ttsRate = numParam("rate", process.env.TTS_RATE, 0.7);
+  const ttsPitch = numParam("pitch", process.env.TTS_PITCH, 1.0);
+  // พูดกี่รอบต่อการเรียก 1 ครั้ง
+  const ttsRepeat = Math.max(1, Math.min(5, Math.round(numParam("repeat", process.env.TTS_REPEAT, 2))));
+  // ข้อความประกาศ — {ชื่อ} จะถูกแทนด้วยชื่อคนไข้
+  const ttsTextRaw = Array.isArray(sp.say) ? sp.say[0] : sp.say;
+  const ttsText =
+    ttsTextRaw || process.env.TTS_TEXT || "เชิญ {ชื่อ} ชำระเงินที่ห้องเก็บเงิน";
+
   const boardTitle =
     process.env.BOARD_TITLE || "ห้องเก็บเงินโรงพยาบาลพลับพลาชัย";
   const refreshSeconds = Number(process.env.REFRESH_SECONDS ?? 15);
@@ -56,6 +74,10 @@ export default async function Page({
       refreshSeconds={refreshSeconds}
       sound={sound}
       voiceName={voiceName}
+      ttsRate={ttsRate}
+      ttsPitch={ttsPitch}
+      ttsRepeat={ttsRepeat}
+      ttsText={ttsText}
     />
   );
 }
