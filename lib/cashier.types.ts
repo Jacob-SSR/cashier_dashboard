@@ -21,6 +21,8 @@ export type CashierRoute = "มียา" | "ไม่มียา";
  *    ทุกจอในระบบนี้เป็นจอสาธารณะให้คนไข้ดู จึงไม่ส่งข้อมูลระบุตัวตนลงเบราว์เซอร์
  */
 export interface CashierRow {
+  /** ชื่อสำหรับอ่านออกเสียง — คุณ<ชื่อ> <นามสกุล> ตามรูปแบบจอเดิม */
+  callName: string;
   id: string;
   vn: string;
   hn: string;
@@ -102,6 +104,11 @@ export interface CallRow {
   key: string;
   queueNo: string;
   name: string;
+  /**
+   * ชื่อที่ใช้ "อ่านออกเสียง" — คุณ<ชื่อ> <นามสกุล> ไม่มีคำนำหน้า
+   * รูปแบบเดียวกับจอคิวเดิมของ รพ. (CONCAT('คุณ', fname, ' ', lname))
+   */
+  callName: string;
   dept: string;
   amount: number;
 }

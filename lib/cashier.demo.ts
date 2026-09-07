@@ -89,6 +89,8 @@ export function demoRows(): CashierRow[] {
           ? "กลับไปรับยาที่ห้องยา"
           : "กลับบ้าน"
         : "";
-    return { id: vn, vn, queueNo, priority: 0, time, route, nextStep, ...s };
+    // ชื่อสำหรับอ่านออกเสียงในโหมดสาธิต — ตัดคำนำหน้าออกแล้วเติม "คุณ" เหมือนของจริง
+    const callName = `คุณ${s.name.replace(/^(นางสาว|นาง|นาย|เด็กชาย|เด็กหญิง|ด\.ช\.|ด\.ญ\.)\s*/, "")}`;
+    return { id: vn, vn, queueNo, priority: 0, time, route, nextStep, callName, ...s };
   });
 }

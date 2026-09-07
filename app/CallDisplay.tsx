@@ -5,6 +5,7 @@
 // ตามข้อมูลจาก HOSxP เอง ไม่ต้องมีใครกดส่งชื่อมาให้
 import { useCallback } from "react";
 import { useAnnouncer } from "./useAnnouncer";
+import type { CallData } from "@/lib/cashier.types";
 import { Icon } from "./Icon";
 
 interface Props {
@@ -18,10 +19,10 @@ export default function CallDisplay({
   refreshSeconds,
   sound,
 }: Props) {
+  // รูปแบบเดียวกับจอเดิมของ รพ. — "ขอเชิญ คุณ<ชื่อ> <นามสกุล> ที่ <แผนก> ค่ะ"
   const buildAnnouncement = useCallback(
-    (name: string) =>
-      `เชิญ ${name} ชำระเงินที่ห้องเก็บเงิน . . ` +
-      `เชิญ ${name} ชำระเงินที่ห้องเก็บเงิน . . เชิญ ${name} ค่ะ`,
+    (row: NonNullable<CallData["calling"]>) =>
+      `ขอเชิญ ${row.callName || row.name} ที่ ${row.dept} ค่ะ`,
     [],
   );
 

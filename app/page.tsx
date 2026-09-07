@@ -21,10 +21,6 @@ export default async function Page({
   // ?sound=0 = ปิดเสียงจอนี้ (ใช้ตอนเปิดหลายจอในห้องเดียวกัน กันเสียงซ้อน)
   const sound = (Array.isArray(sp.sound) ? sp.sound[0] : sp.sound) !== "0";
 
-  // เสียงที่ใช้ประกาศ — หน้างานเลือก "สิริ" ลองสลับสด ๆ ได้ด้วย ?voice=premwadee
-  // ดูว่าเครื่องที่ต่อจอมีเสียงอะไรบ้างที่ /voices
-  const voiceParam = Array.isArray(sp.voice) ? sp.voice[0] : sp.voice;
-  const voiceName = voiceParam || process.env.TTS_VOICE || "Siri";
 
   // ── ปรับเสียงประกาศได้จาก .env โดยไม่ต้องแก้โค้ด ──────────────────────
   // ลองสดบนจอก่อนได้ด้วย query string เช่น  /?rate=0.6&repeat=3
@@ -34,18 +30,18 @@ export default async function Page({
     return Number.isFinite(n) ? n : fallback;
   };
 
-  // 0.7 = ช้ากว่าปกติพอให้คนสูงอายุฟังทัน (1.0 = ความเร็วปกติของเสียงนั้น)
-  const ttsRate = numParam("rate", process.env.TTS_RATE, 0.7);
-  const ttsPitch = numParam("pitch", process.env.TTS_PITCH, 1.0);
   // พูดกี่รอบต่อการเรียก 1 ครั้ง
   const ttsRepeat = Math.max(1, Math.min(5, Math.round(numParam("repeat", process.env.TTS_REPEAT, 2))));
   // ข้อความประกาศ — {ชื่อ} จะถูกแทนด้วยชื่อคนไข้
   const ttsTextRaw = Array.isArray(sp.say) ? sp.say[0] : sp.say;
+  // ค่าเริ่มต้นยกมาจากจอเดิมเป๊ะ ๆ — " ขอเชิญ คุณ<ชื่อ> <นามสกุล> ที่ <แผนก> ค่ะ "
+  // เปลี่ยนคำ/เครื่องหมายแล้วเสียงจะออกไม่เหมือนเดิม จึงไม่ควรแก้ถ้าไม่จำเป็น
   const ttsText =
-    ttsTextRaw || process.env.TTS_TEXT || "เชิญ {ชื่อ} ชำระเงินที่ห้องเก็บเงิน";
+    ttsTextRaw || process.env.TTS_TEXT || "ขอเชิญ {ชื่อ} ที่ {จุดบริการ} ค่ะ";
   // ประโยคปิดท้าย พูดครั้งเดียวหลังเรียกชื่อครบทุกรอบ — ตั้งค่าว่างเพื่อไม่ให้พูด
   const thanksRaw = Array.isArray(sp.thanks) ? sp.thanks[0] : sp.thanks;
   const ttsThanks = thanksRaw ?? process.env.TTS_THANKS ?? "ขอบคุณค่ะ";
+
 
   const boardTitle =
     process.env.BOARD_TITLE || "ห้องเก็บเงินโรงพยาบาลพลับพลาชัย";
@@ -76,9 +72,6 @@ export default async function Page({
       rowsPerColumn={boardRowsPerColumn()}
       refreshSeconds={refreshSeconds}
       sound={sound}
-      voiceName={voiceName}
-      ttsRate={ttsRate}
-      ttsPitch={ttsPitch}
       ttsRepeat={ttsRepeat}
       ttsText={ttsText}
       ttsThanks={ttsThanks}

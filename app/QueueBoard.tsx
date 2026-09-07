@@ -11,7 +11,7 @@ import { useCallback, useEffect, useState } from "react";
 import { deptStyle } from "./dept";
 import { Icon } from "./Icon";
 import { useAnnouncer } from "./useAnnouncer";
-import type { BoardData, BoardRow } from "@/lib/cashier.types";
+import type { BoardData, BoardRow, CallData } from "@/lib/cashier.types";
 
 interface Props {
   initialData: BoardData;
@@ -22,12 +22,6 @@ interface Props {
   refreshSeconds: number;
   /** เปิดเสียงประกาศบนจอนี้ (ปิดด้วย ?sound=0 ถ้าเปิดหลายจอในห้องเดียวกัน) */
   sound: boolean;
-  /** ชื่อเสียงที่ใช้ประกาศ (TTS_VOICE / ?voice=) */
-  voiceName: string;
-  /** ความเร็วเสียง 1.0 = ปกติ, ต่ำกว่านั้น = ช้าลง (TTS_RATE / ?rate=) */
-  ttsRate: number;
-  /** ระดับเสียงสูง-ต่ำ (TTS_PITCH / ?pitch=) */
-  ttsPitch: number;
   /** พูดกี่รอบต่อการเรียก 1 ครั้ง (TTS_REPEAT / ?repeat=) */
   ttsRepeat: number;
   /** ข้อความประกาศ ใช้ {ชื่อ} แทนตำแหน่งชื่อคนไข้ (TTS_TEXT / ?say=) */
@@ -73,9 +67,6 @@ export default function QueueBoard({
   rowsPerColumn,
   refreshSeconds,
   sound,
-  voiceName,
-  ttsRate,
-  ttsPitch,
   ttsRepeat,
   ttsText,
   ttsThanks,
@@ -94,13 +85,26 @@ export default function QueueBoard({
    * ไม่ติดกันเป็นพรืด คนไข้ที่นั่งอยู่ไกลจับใจความได้ทัน
    * ปรับข้อความ/จำนวนรอบได้ที่ TTS_TEXT / TTS_REPEAT ใน .env
    */
+  /**
+   * ประกอบประโยคที่ส่งให้เซิร์ฟเวอร์ไปสร้างเสียง
+   *
+   * รูปแบบเริ่มต้นยกมาจากจอเดิมเป๊ะ ๆ (docs/reference/getDoctorRoomQ.php):
+   *   " ขอเชิญ " + CONCAT('คุณ', fname, ' ', lname) + " ที่ " + department + " ค่ะ "
+   * คำและเครื่องหมายเหมือนเดิมทุกตัว เสียงที่ออกมาจึงเหมือนจอเก่าทุกประการ
+   * ปรับได้ที่ TTS_TEXT / TTS_REPEAT ใน .env ถ้าอยากเปลี่ยนทีหลัง
+   */
   const buildAnnouncement = useCallback(
-    (name: string) => {
-      const line = ttsText.replaceAll("{ชื่อ}", name).replaceAll("{name}", name);
+    (row: NonNullable<CallData["calling"]>) => {
+      const line = ttsText
+        .replaceAll("{ชื่อ}", row.callName || row.name)
+        .replaceAll("{name}", row.callName || row.name)
+        .replaceAll("{จุดบริการ}", row.dept)
+        .replaceAll("{dept}", row.dept)
+        .replaceAll("{คิว}", row.queueNo);
       const parts = Array(ttsRepeat).fill(line);
       // ประโยคปิดท้ายพูดครั้งเดียว ไม่ซ้ำตามรอบ
       if (ttsThanks.trim()) parts.push(ttsThanks.trim());
-      return parts.join(" . . . ");
+      return parts.join(" ");
     },
     [ttsText, ttsRepeat, ttsThanks],
   );
@@ -110,9 +114,6 @@ export default function QueueBoard({
     enabled: sound,
     refreshSeconds,
     buildAnnouncement,
-    voiceName,
-    rate: ttsRate,
-    pitch: ttsPitch,
   });
 
   useEffect(() => {

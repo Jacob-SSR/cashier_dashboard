@@ -145,6 +145,8 @@ interface Row {
   hn: string;
   queue_no: number | string | null;
   patient_name: string;
+  /** ชื่อสำหรับอ่านออกเสียง รูปแบบเดียวกับจอเดิม: คุณ<ชื่อ> <นามสกุล> */
+  call_name: string;
   dept_name: string;
   send_time: string;
   /** ชื่อสถานะจาก ovstost — ใช้ตัดคนที่ออกจากระบบไปแล้วออกจากจอ */
@@ -347,6 +349,7 @@ async function queryHosxp(
         o.hn                                       AS hn,
         o.oqueue                                   AS queue_no,
         CONCAT_WS(' ', p.pname, p.fname, p.lname)  AS patient_name,
+        CONCAT('คุณ', p.fname, ' ', p.lname)       AS call_name,
         COALESCE(kl.department, km.department, '') AS dept_name,
         COALESCE(os.name, '')                      AS status_name,
         COALESCE(o.pt_priority, 0)                 AS pt_priority,
@@ -394,6 +397,7 @@ async function queryHosxp(
       queueNo: toQueueNo(r.queue_no),
       priority: num(r.pt_priority),
       name: clean(r.patient_name) || clean(r.hn),
+      callName: clean(r.call_name) || clean(r.patient_name),
       dept: clean(r.dept_name) || "ไม่ระบุแผนก",
       time: clean(r.send_time),
       status,
@@ -632,6 +636,9 @@ async function queryCalled(date: string, limit: number): Promise<CashierRow[]> {
       o.hn                                       AS hn,
       o.oqueue                                   AS queue_no,
       CONCAT_WS(' ', p.pname, p.fname, p.lname)  AS patient_name,
+      -- ชื่อที่ใช้ "อ่านออกเสียง" — จอเดิมใช้ CONCAT('คุณ', fname, ' ', lname)
+      -- ไม่มีคำนำหน้า (นาย/นาง/ด.ช.) เพราะอ่านแล้วยาวและไม่เป็นธรรมชาติ
+      CONCAT('คุณ', p.fname, ' ', p.lname)       AS call_name,
       d.department                               AS dept_name,
       ''                                         AS status_name,
       COALESCE(o.pt_priority, 0)                 AS pt_priority,
@@ -659,6 +666,7 @@ async function queryCalled(date: string, limit: number): Promise<CashierRow[]> {
     queueNo: toQueueNo(r.queue_no),
     priority: num(r.pt_priority),
     name: clean(r.patient_name) || clean(r.hn),
+    callName: clean(r.call_name) || clean(r.patient_name),
     dept: clean(r.dept_name) || "ห้องเก็บเงิน",
     time: clean(r.send_time),
     status: "รอชำระ" as CashierStatus,
@@ -741,6 +749,7 @@ export async function getCallQueue(date?: string): Promise<CallData> {
             key: rowKey(head.vn),
             queueNo: head.queueNo,
             name: head.name,
+            callName: head.callName,
             dept: head.dept,
             amount: head.amount,
           }
@@ -765,6 +774,7 @@ export async function getCallQueue(date?: string): Promise<CallData> {
           key: rowKey(`${head.vn}@${head.time}`),
           queueNo: head.queueNo,
           name: head.name,
+          callName: head.callName,
           dept: head.dept,
           amount: head.amount,
         }

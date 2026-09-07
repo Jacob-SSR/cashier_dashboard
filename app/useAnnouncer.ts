@@ -1,44 +1,41 @@
 "use client";
 
 // app/useAnnouncer.ts
-// ประกาศเรียกชื่อคนที่ถึงคิว "อัตโนมัติ" — ไม่มีปุ่มให้ใครกด
+// ประกาศเรียกชื่อคนที่ถึงคิว "อัตโนมัติ" — ไม่มีปุ่มให้ใครกดตอนทำงานปกติ
 //
-// จังหวะที่ประกาศ: เมื่อ "คนหัวแถวเปลี่ยน" เท่านั้น
-//   เจ้าหน้าที่กดรับเงินใน HOSxP → คนนั้นจ่ายครบ → หลุดจากคิว
-//   → หัวแถวกลายเป็นคนถัดไป → จอประกาศชื่อคนใหม่ 1 ครั้ง
-// จึงประกาศทีละคนตามจังหวะการรับเงินจริง โดยไม่ต้องมีใครกดอะไรเลย
+// ── ทำไมไม่ใช้ speechSynthesis ของเบราว์เซอร์ ──────────────────────────────
+// จอนี้ต้องแขวนได้กับทีวีทุกยี่ห้อ (LG webOS / Samsung Tizen / Google TV /
+// TCL / Hisense / Philips) ซึ่ง Web Speech API มีบ้างไม่มีบ้าง และเสียงไทย
+// ที่ติดมากับเครื่องเป็นคนละตัวกันทุกยี่ห้อ — เสียงจะไม่เหมือนกันสักจอ
 //
-// ⚠️ ข้อจำกัดของเบราว์เซอร์: speechSynthesis จะไม่ทำงานจนกว่าหน้าเว็บจะเคย
-//    ถูกคลิก/แตะอย่างน้อย 1 ครั้ง (นโยบาย autoplay) — hook คืนค่า needsUnlock
-//    ให้จอขึ้นแถบ "แตะเพื่อเปิดเสียง" ครั้งเดียวตอนเปิดจอ
-//    ถ้าอยากให้ไม่ต้องแตะเลย เปิด Chrome ด้วย --autoplay-policy=no-user-gesture-required
-//    (ดู README หัวข้อ "เสียงเรียกคิว")
+// จึงย้ายไปให้ "เซิร์ฟเวอร์" สร้างเสียงด้วย Google Translate TTS ตัวเดิมที่จอเก่าใช้
+// แล้วส่งมาเป็น MP3 ธรรมดา ทีวีเห็นแค่ไฟล์เสียงผ่าน <audio> มาตรฐาน
+//
+//   คิว → Next.js → Google Translate TTS → MP3 → HTTP → ทีวี → <audio> → ลำโพง
+//
+// ── จังหวะที่ประกาศ ───────────────────────────────────────────────────────
+// เจ้าหน้าที่กด "เรียกคิว" ใน HOSxP → มีแถวใหม่ใน sd_queue_calling
+// → /api/queue/call คืน key ใหม่ → จอประกาศ 1 ครั้ง
+//
+// ⚠️ นโยบาย autoplay: เบราว์เซอร์ไม่ยอมเล่นเสียงจนกว่าจะมีการกดปุ่มสักครั้ง
+//    hook คืน needsUnlock + unlockSound() ให้จอขึ้นปุ่มให้กดด้วยรีโมตทีวี
 import { useCallback, useEffect, useRef, useState } from "react";
-import { pickVoice } from "./voice";
+import { AudioQueueManager } from "@/lib/audio/AudioQueueManager";
 import type { CallData } from "@/lib/cashier.types";
 
 interface Options {
-  /** เปิดเสียงหรือไม่ — จอเดียวในห้องควรเปิด จอที่เหลือปิด กันเสียงซ้อน */
+  /** เปิดเสียงประกาศบนจอนี้ — จอเดียวในห้องควรเปิด จอที่เหลือปิด กันเสียงซ้อน */
   enabled: boolean;
-  /** ระยะถามเซิร์ฟเวอร์ว่าหัวแถวเปลี่ยนหรือยัง (วินาที) */
+  /** ระยะถามเซิร์ฟเวอร์ว่ามีคนถูกเรียกใหม่หรือยัง (วินาที) */
   refreshSeconds: number;
-  /** ข้อความประกาศ — ใส่ชื่อคนไข้เข้าไป */
-  buildAnnouncement: (name: string) => string;
-  /** ชื่อเสียงที่อยากใช้ (TTS_VOICE / ?voice=) — ใส่แค่บางส่วนของชื่อก็ได้ */
-  voiceName?: string;
-  /** ความเร็ว 1.0 = ปกติ — จอ รพ. ตั้ง 0.7 ให้ผู้สูงอายุฟังทัน */
-  rate?: number;
-  /** ระดับเสียงสูง-ต่ำ 1.0 = ปกติ */
-  pitch?: number;
+  /** ข้อความประกาศ — ใส่ชื่อคนไข้กับจุดบริการเข้าไป */
+  buildAnnouncement: (row: NonNullable<CallData["calling"]>) => string;
 }
 
 export function useAnnouncer({
   enabled,
   refreshSeconds,
   buildAnnouncement,
-  voiceName,
-  rate = 0.7,
-  pitch = 1,
 }: Options) {
   const [calling, setCalling] = useState<CallData["calling"]>(null);
   const [needsUnlock, setNeedsUnlock] = useState(false);
@@ -47,31 +44,30 @@ export function useAnnouncer({
   const announced = useRef<Set<string>>(new Set());
   // รอบแรกยังไม่ประกาศ: เปิดจอ/รีเฟรชหน้า ไม่ควรตะโกนชื่อคนที่ยืนอยู่หน้าเคาน์เตอร์แล้ว
   const primed = useRef(false);
+  // ตัวจัดคิวเสียง — เล่นทีละอัน ไม่ให้ทับกันเวลาเรียกรัว ๆ
+  // สร้างครั้งแรกตอนถูกใช้จริง (ไม่แตะ ref ระหว่าง render และไม่สร้างตอน SSR)
+  const audioRef = useRef<AudioQueueManager | null>(null);
+  const getAudio = useCallback((): AudioQueueManager | null => {
+    if (typeof window === "undefined") return null;
+    if (!audioRef.current) audioRef.current = new AudioQueueManager();
+    return audioRef.current;
+  }, []);
+
+  /** ปุ่มบนจอเรียกอันนี้ — ต้องอยู่ในจังหวะที่ผู้ใช้เพิ่งกดปุ่มจริง ๆ */
+  const unlockSound = useCallback(async () => {
+    const ok = await getAudio()?.unlock();
+    if (ok) setNeedsUnlock(false);
+  }, [getAudio]);
 
   const speak = useCallback(
-    (name: string) => {
-      if (!("speechSynthesis" in window)) return;
-      const synth = window.speechSynthesis;
-      const u = new SpeechSynthesisUtterance(buildAnnouncement(name));
-      u.lang = "th-TH";
-      // จำกัดช่วงที่เบราว์เซอร์รับได้ กันค่าพิมพ์ผิดใน .env ทำให้เสียงเพี้ยนหรือเงียบ
-      u.rate = Math.min(2, Math.max(0.5, rate));
-      u.pitch = Math.min(2, Math.max(0, pitch));
-      u.volume = 1;
-
-      const voice = pickVoice(synth.getVoices(), voiceName);
-      if (voice) {
-        u.voice = voice;
-        // บางเครื่องตั้ง lang ของเสียง Siri เป็น en-US ถ้าไม่ตามให้จะอ่านไทยเป็นอังกฤษ
-        if (voice.lang) u.lang = voice.lang;
-      }
-
-      // ⚠️ ห้าม synth.cancel() ตรงนี้ — ถ้าเจ้าหน้าที่กดเรียก 2 คนติด ๆ กัน
-      //    การ cancel จะไปตัดประกาศคนแรกทิ้งกลางคัน คนนั้นก็ไม่ได้ยินชื่อตัวเอง
-      //    ปล่อยให้ต่อคิวพูดเองตามลำดับที่ถูกเรียกจริง
-      synth.speak(u);
+    (row: NonNullable<CallData["calling"]>) => {
+      const text = buildAnnouncement(row);
+      if (!text.trim()) return;
+      // ใส่ URL ตรง ๆ ใน <audio> — ไม่ต้องแปลงเป็น Blob/data URI
+      // ทีวีบางยี่ห้อจัดการ object URL ได้ไม่ดี แต่ไฟล์ผ่าน HTTP ปกติเล่นได้หมด
+      getAudio()?.enqueue(`/api/tts?text=${encodeURIComponent(text)}`);
     },
-    [buildAnnouncement, voiceName, rate, pitch],
+    [buildAnnouncement, getAudio],
   );
 
   const poll = useCallback(async () => {
@@ -93,7 +89,7 @@ export function useAnnouncer({
 
       if (announced.current.has(head.key)) return;
       announced.current.add(head.key);
-      if (enabled) speak(head.name);
+      if (enabled) speak(head);
     } catch {
       // ดึงไม่ได้รอบนี้ = ข้ามไป รอบหน้าค่อยว่ากัน จอไม่ต้องขึ้น error
     }
@@ -109,91 +105,45 @@ export function useAnnouncer({
     };
   }, [poll, refreshSeconds]);
 
-  // ── โหลดรายชื่อเสียง ────────────────────────────────────────────────────
-  // มาแบบ async — Chrome คืน [] ตอนโหลดหน้าแรก ต้องรอ event voiceschanged ก่อน
-  // ถ้าไม่รอ pickVoice() จะไม่เจอเสียงสิริในรอบประกาศแรก
+  // ── ตรวจว่าเบราว์เซอร์ยอมให้เล่นเสียงหรือยัง ────────────────────────────
+  // ลองปลดล็อกเองก่อน (บางเครื่อง/บาง kiosk ยอมอยู่แล้ว) ถ้าไม่ได้ค่อยขึ้นปุ่ม
+  // ให้กดด้วยรีโมต แล้วลองซ้ำเรื่อย ๆ เผื่อเบราว์เซอร์ยอมทีหลัง
   useEffect(() => {
-    if (!("speechSynthesis" in window)) return;
-    const load = () => window.speechSynthesis.getVoices();
-    load();
-    window.speechSynthesis.addEventListener("voiceschanged", load);
-    return () =>
-      window.speechSynthesis.removeEventListener("voiceschanged", load);
-  }, []);
-
-  // ── ปลดล็อกเสียง ────────────────────────────────────────────────────────
-  // จอนี้แขวนบนทีวี ไม่มีเมาส์ไม่มีคีย์บอร์ด "แตะเพื่อเปิดเสียง" จึงใช้ไม่ได้จริง
-  // ทางที่ถูกคือเปิด Chrome ด้วย --autoplay-policy=no-user-gesture-required
-  // (ดู start-tv.bat) แล้วเสียงจะออกเองตั้งแต่ต้นโดยไม่ต้องมีใครทำอะไรเลย
-  //
-  // แต่เผื่อกรณีเปิดผิดวิธี จอยังต้องกู้ตัวเองได้ จึง:
-  //   1) ยิงเสียงเปล่าทดสอบซ้ำทุก 10 วิ ไม่ใช่ครั้งเดียวแล้วยอมแพ้
-  //      (เบราว์เซอร์บางรุ่นปลดล็อกให้เองหลังหน้าเปิดค้างไว้สักพัก)
-  //   2) ถ้ามีใครบังเอิญแตะ/กดปุ่มรีโมต ก็ถือเป็นการปลดล็อกทันที
-  // ให้ปุ่มบนจอเรียกได้ด้วย — เบราว์เซอร์ทีวีต้องมี "การกดจริง" ถึงจะปลดล็อกเสียง
-  const unlockRef = useRef<() => void>(() => {});
-  const unlockSound = useCallback(() => unlockRef.current(), []);
-
-  useEffect(() => {
-    if (!enabled || !("speechSynthesis" in window)) return;
-
-    let unlocked = false;
-    let first = true;
+    if (!enabled) return;
+    let stop = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const unlock = () => {
-      if (unlocked) return;
-      unlocked = true;
-      clearTimeout(timer);
-      window.speechSynthesis.getVoices();
-      // พูดเสียงเปล่าทันทีในจังหวะที่ยังนับเป็น "user gesture" อยู่
-      // เบราว์เซอร์บางตัวปลดล็อกให้ต่อเมื่อมีการ speak() ในเฟรมเดียวกับการกด
-      try {
-        const u = new SpeechSynthesisUtterance(" ");
-        u.volume = 0;
-        window.speechSynthesis.speak(u);
-      } catch {
-        // ไม่เป็นไร ถือว่าปลดล็อกแล้ว
-      }
-      setNeedsUnlock(false);
-    };
-    unlockRef.current = unlock;
+    const attempt = async (delay: number) => {
+      if (stop) return;
+      const mgr = getAudio();
+      if (!mgr) return;
 
-    const probe = () => {
-      if (unlocked) return;
-      // เสียงเปล่า volume 0 — ถ้าเบราว์เซอร์ยอมเล่น แปลว่าประกาศจริงก็จะออกได้
-      const u = new SpeechSynthesisUtterance(" ");
-      u.volume = 0;
-      u.onstart = unlock;
-      u.onend = unlock;
-      try {
-        window.speechSynthesis.speak(u);
-      } catch {
-        // เบราว์เซอร์ปฏิเสธ — รอบหน้าค่อยลองใหม่
+      // ⚠️ ห้าม probe ระหว่างที่กำลังประกาศอยู่
+      //    การ probe ต้องตั้ง src ของ element ซึ่งจะไปขัดจังหวะเสียงที่เล่นค้างอยู่
+      //    (AbortError: play() request was interrupted by a new load request)
+      //    ถ้าเล่นอยู่ได้ = เบราว์เซอร์ยอมแล้ว ไม่ต้อง probe ตั้งแต่แรก
+      if (mgr.isUnlocked()) {
+        setNeedsUnlock(false);
+        return;
       }
-      // ครั้งแรกเช็คเร็ว (1.5 วิ) ปุ่มจะได้ขึ้นทันทีที่รู้ว่าเสียงถูกบล็อก
-      // เจ้าหน้าที่จะได้ไม่ต้องยืนงงหน้าจอ ครั้งต่อ ๆ ไปค่อยเว้น 10 วิ
-      timer = setTimeout(() => {
-        if (unlocked) return;
-        setNeedsUnlock(true);
-        first = false;
-        probe();
-      }, first ? 1_500 : 10_000);
+
+      const ok = await mgr.unlock();
+      if (stop) return;
+      if (ok) {
+        setNeedsUnlock(false);
+        return; // ปลดล็อกแล้ว ไม่ต้องลองอีก
+      }
+      setNeedsUnlock(true);
+      timer = setTimeout(() => void attempt(10_000), delay);
     };
 
-    probe();
-
-    document.addEventListener("click", unlock, { once: true });
-    document.addEventListener("touchstart", unlock, { once: true });
-    document.addEventListener("keydown", unlock, { once: true });
+    void attempt(10_000);
 
     return () => {
+      stop = true;
       clearTimeout(timer);
-      document.removeEventListener("click", unlock);
-      document.removeEventListener("touchstart", unlock);
-      document.removeEventListener("keydown", unlock);
     };
-  }, [enabled]);
+  }, [enabled, getAudio]);
 
   return { calling, needsUnlock, unlockSound };
 }
