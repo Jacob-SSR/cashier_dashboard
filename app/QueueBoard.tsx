@@ -106,7 +106,7 @@ export default function QueueBoard({
   );
 
   // ประกาศชื่อคนที่ถึงคิวเอง ไม่ต้องมีใครกด
-  const { needsUnlock } = useAnnouncer({
+  const { needsUnlock, unlockSound } = useAnnouncer({
     enabled: sound,
     refreshSeconds,
     buildAnnouncement,
@@ -297,10 +297,20 @@ export default function QueueBoard({
       )}
 
       {needsUnlock && (
-        <div className="tv-unlock">
-          <Icon name="sound" /> เบราว์เซอร์บล็อกเสียงอยู่ — รัน scripts\allow-sound.reg
-          ครั้งเดียว แล้วเปิดเบราว์เซอร์ใหม่
-        </div>
+        /* ต้องเป็น <button> จริงและโฟกัสไว้ให้เอง — เบราว์เซอร์ของทีวีเดินด้วย
+           ปุ่มทิศทาง ปุ่ม OK จะ "กด" ได้เฉพาะสิ่งที่โฟกัสอยู่ ถ้าเป็น <div> เฉย ๆ
+           กด OK แล้วจะไม่เกิดอะไรขึ้นเลย */
+        <button
+          type="button"
+          className="tv-unlock"
+          autoFocus
+          onClick={unlockSound}
+        >
+          <Icon name="sound" />
+          <span>
+            กด <b>ปุ่ม OK ตรงกลางรีโมต</b> หนึ่งครั้ง เพื่อเปิดเสียงเรียกคิว
+          </span>
+        </button>
       )}
 
       <footer className="tv-footer">

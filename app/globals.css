@@ -139,14 +139,56 @@ body {
    ถ้าไม่อยากให้ขึ้นแถบนี้เลย เปิด Chrome ด้วย
    --autoplay-policy=no-user-gesture-required (ดู README) */
 .tv-unlock {
-  /* เป็นแถบจริงในหน้า ไม่ลอยทับแถวคิว (ขึ้นแค่ตอนยังไม่ได้แตะเปิดเสียง) */
-  flex-shrink: 0;
-  text-align: center;
+  /* ลอยทับแถบสรุปด้านล่าง ไม่แทรกในเลย์เอาต์
+     เดิมเป็นแถบจริงในหน้า พอโผล่มาเลยไปบีบช่องคิวจนบรรทัด "ส่งมา/จาก" โดนตัด
+     ตัวนับท้ายจอถูกบังชั่วคราวได้ ไม่สำคัญเท่ารายชื่อคิว
+     และแถบนี้จะหายไปเองทันทีที่กดปุ่ม OK */
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  box-shadow: 0 -0.6vh 2vh rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6vh;
   background: #12312A;
   color: #fff;
-  padding: 1.2vh 3vh;
-  font-size: 2.4vh;
+  padding: 1.6vh 3vh;
+  font-size: 3.2vh;
   font-weight: 600;
+  line-height: 1.4;
+  animation: tv-unlock-pulse 2s ease-in-out infinite;
+
+  /* เป็น <button> จริง — ล้างสไตล์ปุ่มของเบราว์เซอร์ทิ้งให้ดูเหมือนแถบ */
+  width: 100%;
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+/* กรอบตอนโฟกัส — บนทีวีต้องเห็นชัดว่า "ปุ่ม OK จะกดอันนี้" */
+.tv-unlock:focus-visible,
+.tv-unlock:focus {
+  outline: 0.5vh solid #7FE6BE;
+  outline-offset: -0.5vh;
+}
+
+.tv-unlock b {
+  font-weight: 800;
+  color: #7FE6BE;
+}
+
+.tv-unlock .icon { font-size: 4vh; }
+
+@keyframes tv-unlock-pulse {
+  0%, 100% { background: #12312A; }
+  50%      { background: #1E5C46; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tv-unlock { animation: none; }
 }
 
 /* ─── จอเรียกชื่อเต็มจอ (/display) ─────────────────────────

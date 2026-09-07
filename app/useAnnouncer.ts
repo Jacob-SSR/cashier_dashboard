@@ -130,10 +130,15 @@ export function useAnnouncer({
   //   1) ยิงเสียงเปล่าทดสอบซ้ำทุก 10 วิ ไม่ใช่ครั้งเดียวแล้วยอมแพ้
   //      (เบราว์เซอร์บางรุ่นปลดล็อกให้เองหลังหน้าเปิดค้างไว้สักพัก)
   //   2) ถ้ามีใครบังเอิญแตะ/กดปุ่มรีโมต ก็ถือเป็นการปลดล็อกทันที
+  // ให้ปุ่มบนจอเรียกได้ด้วย — เบราว์เซอร์ทีวีต้องมี "การกดจริง" ถึงจะปลดล็อกเสียง
+  const unlockRef = useRef<() => void>(() => {});
+  const unlockSound = useCallback(() => unlockRef.current(), []);
+
   useEffect(() => {
     if (!enabled || !("speechSynthesis" in window)) return;
 
     let unlocked = false;
+    let first = true;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const unlock = () => {
@@ -141,8 +146,18 @@ export function useAnnouncer({
       unlocked = true;
       clearTimeout(timer);
       window.speechSynthesis.getVoices();
+      // พูดเสียงเปล่าทันทีในจังหวะที่ยังนับเป็น "user gesture" อยู่
+      // เบราว์เซอร์บางตัวปลดล็อกให้ต่อเมื่อมีการ speak() ในเฟรมเดียวกับการกด
+      try {
+        const u = new SpeechSynthesisUtterance(" ");
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+      } catch {
+        // ไม่เป็นไร ถือว่าปลดล็อกแล้ว
+      }
       setNeedsUnlock(false);
     };
+    unlockRef.current = unlock;
 
     const probe = () => {
       if (unlocked) return;
@@ -156,11 +171,14 @@ export function useAnnouncer({
       } catch {
         // เบราว์เซอร์ปฏิเสธ — รอบหน้าค่อยลองใหม่
       }
+      // ครั้งแรกเช็คเร็ว (1.5 วิ) ปุ่มจะได้ขึ้นทันทีที่รู้ว่าเสียงถูกบล็อก
+      // เจ้าหน้าที่จะได้ไม่ต้องยืนงงหน้าจอ ครั้งต่อ ๆ ไปค่อยเว้น 10 วิ
       timer = setTimeout(() => {
         if (unlocked) return;
         setNeedsUnlock(true);
+        first = false;
         probe();
-      }, 10_000);
+      }, first ? 1_500 : 10_000);
     };
 
     probe();
@@ -177,5 +195,5 @@ export function useAnnouncer({
     };
   }, [enabled]);
 
-  return { calling, needsUnlock };
+  return { calling, needsUnlock, unlockSound };
 }
