@@ -1,116 +1,579 @@
 "use client";
 
-// app/voices/page.tsx
-// หน้าเช็กเสียง — เปิดบน "เครื่องที่เอาไปต่อจอ TV" เท่านั้น
-//
-// รายชื่อเสียงขึ้นกับ OS + เบราว์เซอร์ของเครื่องนั้น ไม่ใช่ของเซิร์ฟเวอร์
-// จอ Sharp ที่ รพ. ใช้อาจไม่มี "สิริ" (เป็นเสียงของ Apple) หน้านี้ช่วยให้เห็นว่า
-// เครื่องนั้นมีอะไรให้เลือกจริง ๆ แล้วเอาชื่อไปใส่ TTS_VOICE ใน .env.production
-import { useCallback, useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { Icon } from "../Icon";
 import { pickVoice } from "../voice";
 
 const SAMPLE = "เชิญ นางสาวสุภาพร ชำระเงินที่ห้องเก็บเงิน";
 
+const FEMALE_KEYWORDS = [
+  "female",
+  "woman",
+  "girl",
+  "หญิง",
+  "premwadee",
+  "kanya",
+  "siri",
+];
+
+function isThaiVoice(v: SpeechSynthesisVoice) {
+  return v.lang.toLowerCase().startsWith("th");
+}
+
+function isLikelyFemaleVoice(v: SpeechSynthesisVoice) {
+  const name = v.name.toLowerCase();
+
+  return FEMALE_KEYWORDS.some((keyword) =>
+    name.includes(keyword.toLowerCase())
+  );
+}
+
+/* =========================================================
+   Speech Synthesis support
+   ========================================================= */
+
+function subscribeSpeechSynthesis(callback: () => void) {
+  if (
+    typeof window === "undefined" ||
+    !("speechSynthesis" in window)
+  ) {
+    return () => { };
+  }
+
+  window.speechSynthesis.addEventListener(
+    "voiceschanged",
+    callback
+  );
+
+  return () => {
+    window.speechSynthesis.removeEventListener(
+      "voiceschanged",
+      callback
+    );
+  };
+}
+
+function getSpeechSynthesisSupport() {
+  return (
+    typeof window !== "undefined" &&
+    "speechSynthesis" in window
+  );
+}
+
+function getServerSpeechSynthesisSupport() {
+  // สำคัญ:
+  // Server ต้องได้ค่าเดียวกับ Client ใน hydration รอบแรก
+  return false;
+}
+
 export default function VoicesPage() {
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [wanted, setWanted] = useState("Siri");
+  const [speaking, setSpeaking] = useState<string | null>(null);
+
+  /* =========================================================
+     ตรวจ Browser รองรับ Speech Synthesis หรือไม่
+
+     ใช้ useSyncExternalStore เพื่อป้องกัน
+     Hydration mismatch
+     ========================================================= */
+
+  const supported = useSyncExternalStore(
+    subscribeSpeechSynthesis,
+    getSpeechSynthesisSupport,
+    getServerSpeechSynthesisSupport
+  );
+
+  /* =========================================================
+     โหลดเสียงจากเครื่อง
+     ========================================================= */
 
   useEffect(() => {
-    if (!("speechSynthesis" in window)) return;
-    const load = () => setVoices(window.speechSynthesis.getVoices());
-    load();
-    window.speechSynthesis.addEventListener("voiceschanged", load);
-    return () =>
-      window.speechSynthesis.removeEventListener("voiceschanged", load);
+    if (
+      typeof window === "undefined" ||
+      !("speechSynthesis" in window)
+    ) {
+      return;
+    }
+
+    const loadVoices = () => {
+      const list = window.speechSynthesis.getVoices();
+
+      const unique = Array.from(
+        new Map(
+          list.map((voice) => [
+            `${voice.name}-${voice.lang}`,
+            voice,
+          ])
+        ).values()
+      );
+
+      setVoices(unique);
+    };
+
+    // บาง Browser มีเสียงทันที
+    loadVoices();
+
+    // บาง Browser โหลดเสียงทีหลัง
+    window.speechSynthesis.addEventListener(
+      "voiceschanged",
+      loadVoices
+    );
+
+    return () => {
+      window.speechSynthesis.removeEventListener(
+        "voiceschanged",
+        loadVoices
+      );
+    };
   }, []);
 
-  const test = useCallback((v?: SpeechSynthesisVoice) => {
-    const u = new SpeechSynthesisUtterance(SAMPLE);
-    u.lang = v?.lang || "th-TH";
-    u.rate = 0.88;
-    u.pitch = 1.05;
-    if (v) u.voice = v;
+  /* =========================================================
+     ทดสอบเสียง
+     ========================================================= */
+
+  const test = useCallback(
+    (voice?: SpeechSynthesisVoice) => {
+      if (typeof window === "undefined") {
+        return;
+      }
+
+      if (!("speechSynthesis" in window)) {
+        alert("Browser นี้ไม่รองรับ Speech Synthesis");
+        return;
+      }
+
+      const u = new SpeechSynthesisUtterance(SAMPLE);
+
+      u.lang = voice?.lang || "th-TH";
+
+      // ความเร็ว
+      u.rate = 0.30;
+
+      // ความสูงเสียง
+      u.pitch = 0.05;
+
+      // ระดับเสียง
+      // SpeechSynthesis volume รองรับ 0.0 - 1.0
+      u.volume = 1.0;
+
+      if (voice) {
+        u.voice = voice;
+
+        setSpeaking(`${voice.name}-${voice.lang}`);
+      } else {
+        setSpeaking("default");
+      }
+
+      u.onend = () => {
+        setSpeaking(null);
+      };
+
+      u.onerror = () => {
+        setSpeaking(null);
+      };
+
+      // หยุดเสียงเดิมก่อน
+      window.speechSynthesis.cancel();
+
+      // หน่วงเล็กน้อยเพื่อแก้ปัญหา Browser บางตัว
+      setTimeout(() => {
+        if (
+          typeof window !== "undefined" &&
+          "speechSynthesis" in window
+        ) {
+          window.speechSynthesis.speak(u);
+        }
+      }, 50);
+    },
+    []
+  );
+
+  /* =========================================================
+     หยุดเสียง
+     ========================================================= */
+
+  const stop = useCallback(() => {
+    if (
+      typeof window === "undefined" ||
+      !("speechSynthesis" in window)
+    ) {
+      return;
+    }
+
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    setSpeaking(null);
   }, []);
 
-  const thai = voices.filter((v) => v.lang.toLowerCase().startsWith("th"));
-  const others = voices.filter((v) => !v.lang.toLowerCase().startsWith("th"));
-  const chosen = pickVoice(voices, wanted);
+  /* =========================================================
+     เสียงไทย
+     ========================================================= */
+
+  const thai = useMemo(() => {
+    return voices.filter(isThaiVoice);
+  }, [voices]);
+
+  /* =========================================================
+     เสียงผู้หญิง
+     ========================================================= */
+
+  const thaiFemale = useMemo(() => {
+    return thai.filter(isLikelyFemaleVoice);
+  }, [thai]);
+
+  /* =========================================================
+     ภาษาอื่น
+     ========================================================= */
+
+  const others = useMemo(() => {
+    return voices.filter((v) => !isThaiVoice(v));
+  }, [voices]);
+
+  /* =========================================================
+     เสียงที่เลือก
+     ========================================================= */
+
+  const chosen = useMemo(() => {
+    return pickVoice(voices, wanted);
+  }, [voices, wanted]);
+
+  const chosenIsFemale = chosen
+    ? isLikelyFemaleVoice(chosen)
+    : false;
+
+  /* =========================================================
+     Render
+     ========================================================= */
 
   return (
     <main className="vx">
       <h1>เสียงที่เครื่องนี้มี</h1>
+
       <p className="vx-sub">
-        รายชื่อนี้เป็นของ <b>เครื่องที่เปิดหน้านี้</b> ไม่ใช่ของเซิร์ฟเวอร์ —
-        ต้องเปิดบนเครื่องที่ต่อกับจอ TV จริง ๆ ถึงจะเชื่อได้
+        รายชื่อนี้เป็นของ{" "}
+        <b>เครื่องที่เปิดหน้านี้</b>{" "}
+        ไม่ใช่ของเซิร์ฟเวอร์
+        <br />
+        ต้องเปิดหน้านี้บนเครื่องที่ต่อกับจอ TV จริง ๆ
+        ถึงจะเห็นเสียงที่ใช้ได้จริง
       </p>
 
+      {/* =====================================================
+          Browser ไม่รองรับ
+          ===================================================== */}
+
+      {!supported && (
+        <div className="vx-warn">
+          <b>Browser นี้ไม่รองรับ Speech Synthesis</b>
+
+          <br />
+
+          กรุณาใช้ Chrome, Edge หรือ Browser
+          ที่รองรับ Web Speech API
+        </div>
+      )}
+
+      {/* =====================================================
+          เสียงที่เลือก
+          ===================================================== */}
+
       <div className="vx-box">
-        <label htmlFor="vx-want">ชื่อเสียงที่ตั้งไว้ (TTS_VOICE)</label>
+        <label htmlFor="vx-want">
+          ชื่อเสียงที่ต้องการ (TTS_VOICE)
+        </label>
+
         <input
           id="vx-want"
           value={wanted}
           onChange={(e) => setWanted(e.target.value)}
           placeholder="เช่น Siri, Premwadee, Kanya"
         />
+
         <p>
           จอจะเลือกใช้ →{" "}
           {chosen ? (
-            <b>
-              {chosen.name} <span className="vx-lang">({chosen.lang})</span>
-            </b>
+            <>
+              <b>{chosen.name}</b>{" "}
+              <span className="vx-lang">
+                ({chosen.lang})
+              </span>
+
+              {chosenIsFemale && (
+                <span className="vx-tag">
+                  เสียงผู้หญิง
+                </span>
+              )}
+            </>
           ) : (
-            <b className="vx-none">ไม่พบเสียงไทยในเครื่องนี้</b>
+            <b className="vx-none">
+              ไม่พบเสียงที่ต้องการ
+            </b>
           )}
         </p>
-        <button type="button" onClick={() => test(chosen ?? undefined)}>
-          <Icon name="play" /> ฟังตัวอย่าง
-        </button>
+
+        <div className="vx-actions">
+          <button
+            type="button"
+            onClick={() => test(chosen ?? undefined)}
+            disabled={!supported || !chosen}
+          >
+            <Icon name="play" />
+
+            {speaking
+              ? "กำลังพูด..."
+              : "ฟังตัวอย่าง"}
+          </button>
+
+          <button
+            type="button"
+            onClick={stop}
+            disabled={!speaking}
+          >
+            หยุด
+          </button>
+        </div>
       </div>
 
-      <h2>เสียงไทย ({thai.length})</h2>
-      {thai.length === 0 && (
-        <p className="vx-warn">
-          เครื่องนี้ไม่มีเสียงไทยเลย — จอจะประกาศไม่ได้ ต้องลงเสียงไทยของ OS ก่อน
-          (Windows: Settings → Time &amp; language → Speech → Add voices → ไทย)
-        </p>
+      {/* =====================================================
+          เสียงผู้หญิง
+          ===================================================== */}
+
+      <h2>
+        เสียงผู้หญิงที่ตรวจพบ ({thaiFemale.length})
+      </h2>
+
+      {thaiFemale.length === 0 ? (
+        <div className="vx-warn">
+          <b>
+            ไม่พบเสียงผู้หญิงภาษาไทยจากชื่อเสียง
+          </b>
+
+          <br />
+          <br />
+
+          Browser ไม่สามารถบอกเพศของเสียงได้โดยตรง
+          รายการนี้จึงเป็นการเดาจากชื่อเสียงเท่านั้น
+
+          <br />
+          <br />
+
+          ถ้ามีเสียงไทยอยู่ด้านล่าง
+          ให้กดฟังทีละตัวเพื่อเลือกเสียงที่ต้องการ
+        </div>
+      ) : (
+        <ul>
+          {thaiFemale.map((v) => {
+            const key = `${v.name}-${v.lang}`;
+            const active = speaking === key;
+
+            return (
+              <li key={key}>
+                <button
+                  type="button"
+                  onClick={() => test(v)}
+                  disabled={!supported}
+                  aria-label={`ฟัง ${v.name}`}
+                >
+                  <Icon name="play" />
+                </button>
+
+                <span className="vx-name">
+                  {v.name}
+                </span>
+
+                <span className="vx-lang">
+                  {v.lang}
+                </span>
+
+                {v.default && (
+                  <span className="vx-tag">
+                    ค่าเริ่มต้น
+                  </span>
+                )}
+
+                {active && (
+                  <span className="vx-speaking">
+                    กำลังพูด...
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
       )}
-      <ul>
-        {thai.map((v) => (
-          <li key={`${v.name}-${v.lang}`}>
-            <button type="button" onClick={() => test(v)} aria-label={`ฟัง ${v.name}`}>
-              <Icon name="play" />
-            </button>
-            <span className="vx-name">{v.name}</span>
-            <span className="vx-lang">{v.lang}</span>
-            {v.default && <span className="vx-tag">ค่าเริ่มต้น</span>}
-          </li>
-        ))}
-      </ul>
+
+      {/* =====================================================
+          เสียงไทยทั้งหมด
+          ===================================================== */}
+
+      <h2>
+        เสียงไทยทั้งหมด ({thai.length})
+      </h2>
+
+      {thai.length === 0 ? (
+        <p className="vx-warn">
+          <b>
+            เครื่องนี้ไม่มีเสียงไทยเลย
+          </b>
+
+          <br />
+          <br />
+
+          ต้องติดตั้งเสียงภาษาไทยของ OS ก่อน
+
+          <br />
+          <br />
+
+          Windows:
+          <br />
+
+          Settings → Time &amp; language → Speech
+          → Add voices → ไทย
+        </p>
+      ) : (
+        <ul>
+          {thai.map((v) => {
+            const key = `${v.name}-${v.lang}`;
+            const active = speaking === key;
+            const female = isLikelyFemaleVoice(v);
+
+            return (
+              <li key={key}>
+                <button
+                  type="button"
+                  onClick={() => test(v)}
+                  disabled={!supported}
+                  aria-label={`ฟัง ${v.name}`}
+                >
+                  <Icon name="play" />
+                </button>
+
+                <span className="vx-name">
+                  {v.name}
+                </span>
+
+                <span className="vx-lang">
+                  {v.lang}
+                </span>
+
+                {female && (
+                  <span className="vx-tag">
+                    ผู้หญิง*
+                  </span>
+                )}
+
+                {v.default && (
+                  <span className="vx-tag">
+                    ค่าเริ่มต้น
+                  </span>
+                )}
+
+                {active && (
+                  <span className="vx-speaking">
+                    กำลังพูด...
+                  </span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      <p className="vx-sub">
+        * ผู้หญิงเป็นการตรวจจากชื่อเสียง
+        ไม่ใช่ข้อมูลเพศที่ Browser รับรองโดยตรง
+      </p>
+
+      {/* =====================================================
+          ภาษาอื่น
+          ===================================================== */}
 
       <details>
-        <summary>เสียงภาษาอื่น ({others.length})</summary>
+        <summary>
+          เสียงภาษาอื่น ({others.length})
+        </summary>
+
         <ul>
-          {others.map((v) => (
-            <li key={`${v.name}-${v.lang}`}>
-              <button type="button" onClick={() => test(v)} aria-label={`ฟัง ${v.name}`}>
-                <Icon name="play" />
-              </button>
-              <span className="vx-name">{v.name}</span>
-              <span className="vx-lang">{v.lang}</span>
-            </li>
-          ))}
+          {others.map((v) => {
+            const key = `${v.name}-${v.lang}`;
+            const active = speaking === key;
+
+            return (
+              <li key={key}>
+                <button
+                  type="button"
+                  onClick={() => test(v)}
+                  disabled={!supported}
+                  aria-label={`ฟัง ${v.name}`}
+                >
+                  <Icon name="play" />
+                </button>
+
+                <span className="vx-name">
+                  {v.name}
+                </span>
+
+                <span className="vx-lang">
+                  {v.lang}
+                </span>
+
+                {v.default && (
+                  <span className="vx-tag">
+                    ค่าเริ่มต้น
+                  </span>
+                )}
+
+                {active && (
+                  <span className="vx-speaking">
+                    กำลังพูด...
+                  </span>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </details>
 
-      <p className="vx-sub">
-        เจอตัวที่ชอบแล้ว ใส่ชื่อลง <code>TTS_VOICE</code> ใน{" "}
-        <code>.env.production</code> แล้ว <code>docker compose up -d --build</code>
-        <br />
-        หรือลองสดบนจอด้วย <code>/?voice=ชื่อเสียง</code> ก่อนก็ได้
-      </p>
+      {/* =====================================================
+          วิธีตั้งค่า
+          ===================================================== */}
+
+      <div className="vx-box">
+        <h3>วิธีตั้งค่าเสียง</h3>
+
+        <p>
+          <b>1.</b> กดฟังเสียงด้านบน
+        </p>
+
+        <p>
+          <b>2.</b> เลือกเสียงผู้หญิงที่ต้องการ
+        </p>
+
+        <p>
+          <b>3.</b> เอาชื่อเสียงไปใส่ใน{" "}
+          <code>TTS_VOICE</code>
+        </p>
+
+        <pre>{`TTS_VOICE=ชื่อเสียง`}</pre>
+
+        <p>
+          <b>4.</b> Build ใหม่
+        </p>
+
+        <pre>{`docker compose up -d --build`}</pre>
+
+        <p>
+          <b>5.</b> หรือทดลองเสียงสดผ่าน URL
+        </p>
+
+        <pre>{`/?voice=ชื่อเสียง`}</pre>
+      </div>
     </main>
   );
 }
