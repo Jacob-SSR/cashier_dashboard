@@ -122,36 +122,55 @@ export function useAnnouncer({
   }, []);
 
   // ── ปลดล็อกเสียง ────────────────────────────────────────────────────────
-  // เช็กว่าเบราว์เซอร์ยอมให้พูดหรือยัง ถ้ายังให้จอขึ้นแถบชวนแตะ 1 ครั้ง
+  // จอนี้แขวนบนทีวี ไม่มีเมาส์ไม่มีคีย์บอร์ด "แตะเพื่อเปิดเสียง" จึงใช้ไม่ได้จริง
+  // ทางที่ถูกคือเปิด Chrome ด้วย --autoplay-policy=no-user-gesture-required
+  // (ดู start-tv.bat) แล้วเสียงจะออกเองตั้งแต่ต้นโดยไม่ต้องมีใครทำอะไรเลย
+  //
+  // แต่เผื่อกรณีเปิดผิดวิธี จอยังต้องกู้ตัวเองได้ จึง:
+  //   1) ยิงเสียงเปล่าทดสอบซ้ำทุก 10 วิ ไม่ใช่ครั้งเดียวแล้วยอมแพ้
+  //      (เบราว์เซอร์บางรุ่นปลดล็อกให้เองหลังหน้าเปิดค้างไว้สักพัก)
+  //   2) ถ้ามีใครบังเอิญแตะ/กดปุ่มรีโมต ก็ถือเป็นการปลดล็อกทันที
   useEffect(() => {
     if (!enabled || !("speechSynthesis" in window)) return;
 
-    let done = false;
+    let unlocked = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
     const unlock = () => {
-      if (done) return;
-      done = true;
-      // เรียก getVoices() หลัง gesture แรก เบราว์เซอร์ถึงจะโหลดรายชื่อเสียงไทย
+      if (unlocked) return;
+      unlocked = true;
+      clearTimeout(timer);
       window.speechSynthesis.getVoices();
       setNeedsUnlock(false);
     };
 
-    // ทดสอบด้วยเสียงเปล่า ๆ — ถ้าเบราว์เซอล็อกอยู่จะไม่มีอะไรเกิดขึ้น
-    const probe = new SpeechSynthesisUtterance(" ");
-    probe.volume = 0;
-    probe.onstart = unlock;
-    probe.onend = unlock;
-    window.speechSynthesis.speak(probe);
+    const probe = () => {
+      if (unlocked) return;
+      // เสียงเปล่า volume 0 — ถ้าเบราว์เซอร์ยอมเล่น แปลว่าประกาศจริงก็จะออกได้
+      const u = new SpeechSynthesisUtterance(" ");
+      u.volume = 0;
+      u.onstart = unlock;
+      u.onend = unlock;
+      try {
+        window.speechSynthesis.speak(u);
+      } catch {
+        // เบราว์เซอร์ปฏิเสธ — รอบหน้าค่อยลองใหม่
+      }
+      timer = setTimeout(() => {
+        if (unlocked) return;
+        setNeedsUnlock(true);
+        probe();
+      }, 10_000);
+    };
 
-    const t = setTimeout(() => {
-      if (!done) setNeedsUnlock(true);
-    }, 1200);
+    probe();
 
     document.addEventListener("click", unlock, { once: true });
     document.addEventListener("touchstart", unlock, { once: true });
     document.addEventListener("keydown", unlock, { once: true });
 
     return () => {
-      clearTimeout(t);
+      clearTimeout(timer);
       document.removeEventListener("click", unlock);
       document.removeEventListener("touchstart", unlock);
       document.removeEventListener("keydown", unlock);

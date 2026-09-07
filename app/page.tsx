@@ -43,6 +43,9 @@ export default async function Page({
   const ttsTextRaw = Array.isArray(sp.say) ? sp.say[0] : sp.say;
   const ttsText =
     ttsTextRaw || process.env.TTS_TEXT || "เชิญ {ชื่อ} ชำระเงินที่ห้องเก็บเงิน";
+  // ประโยคปิดท้าย พูดครั้งเดียวหลังเรียกชื่อครบทุกรอบ — ตั้งค่าว่างเพื่อไม่ให้พูด
+  const thanksRaw = Array.isArray(sp.thanks) ? sp.thanks[0] : sp.thanks;
+  const ttsThanks = thanksRaw ?? process.env.TTS_THANKS ?? "ขอบคุณค่ะ";
 
   const boardTitle =
     process.env.BOARD_TITLE || "ห้องเก็บเงินโรงพยาบาลพลับพลาชัย";
@@ -78,6 +81,7 @@ export default async function Page({
       ttsPitch={ttsPitch}
       ttsRepeat={ttsRepeat}
       ttsText={ttsText}
+      ttsThanks={ttsThanks}
     />
   );
 }

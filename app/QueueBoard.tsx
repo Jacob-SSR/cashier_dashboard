@@ -32,6 +32,8 @@ interface Props {
   ttsRepeat: number;
   /** ข้อความประกาศ ใช้ {ชื่อ} แทนตำแหน่งชื่อคนไข้ (TTS_TEXT / ?say=) */
   ttsText: string;
+  /** ประโยคปิดท้าย พูดครั้งเดียวตอนจบ ค่าว่าง = ไม่พูด (TTS_THANKS / ?thanks=) */
+  ttsThanks: string;
 }
 
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
@@ -76,6 +78,7 @@ export default function QueueBoard({
   ttsPitch,
   ttsRepeat,
   ttsText,
+  ttsThanks,
 }: Props) {
   const [data, setData] = useState<BoardData>(initialData);
   const [clock, setClock] = useState("");
@@ -94,9 +97,12 @@ export default function QueueBoard({
   const buildAnnouncement = useCallback(
     (name: string) => {
       const line = ttsText.replaceAll("{ชื่อ}", name).replaceAll("{name}", name);
-      return Array(ttsRepeat).fill(line).join(" . . . ");
+      const parts = Array(ttsRepeat).fill(line);
+      // ประโยคปิดท้ายพูดครั้งเดียว ไม่ซ้ำตามรอบ
+      if (ttsThanks.trim()) parts.push(ttsThanks.trim());
+      return parts.join(" . . . ");
     },
-    [ttsText, ttsRepeat],
+    [ttsText, ttsRepeat, ttsThanks],
   );
 
   // ประกาศชื่อคนที่ถึงคิวเอง ไม่ต้องมีใครกด
@@ -292,7 +298,8 @@ export default function QueueBoard({
 
       {needsUnlock && (
         <div className="tv-unlock">
-          <Icon name="sound" /> แตะหน้าจอหนึ่งครั้งเพื่อเปิดเสียงเรียกคิว
+          <Icon name="sound" /> เบราว์เซอร์บล็อกเสียงอยู่ — เปิดจอด้วย start-tv.bat
+          เพื่อให้ประกาศเองโดยไม่ต้องแตะจอ
         </div>
       )}
 
