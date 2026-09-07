@@ -480,7 +480,7 @@ export async function getCashierQueue(date?: string): Promise<CashierData> {
 //   2) เอาเฉพาะคนที่ยังไม่ชำระ เรียง "กำลังชำระ" ขึ้นก่อน แล้วตามเวลาที่ถูกส่งมา
 //      → พอคนหน้าจ่ายครบก็หลุดจากจอ คนถัดไปเลื่อนขึ้นมาเอง
 //   3) ชี้ว่าใคร "ถึงคิว" (หัวแถว) เพื่อไฮไลต์ + ใช้ประกาศเรียกชื่ออัตโนมัติ
-const BOARD_ROWS_DEFAULT = 10;
+const BOARD_ROWS_DEFAULT = 5;
 const BOARD_ROWS_PER_COLUMN_DEFAULT = 5;
 
 function positiveInt(raw: string | undefined, fallback: number): number {
@@ -677,7 +677,14 @@ async function queryCalled(date: string, limit: number): Promise<CashierRow[]> {
 }
 
 /** จำนวนคนในส่วน "เรียกคิว" — จอเดิมโชว์ 2 คน */
-const CALLING_ROWS = 2;
+/**
+ * จำนวนแถวที่ดึงจาก sd_queue_calling
+ * แถวแรก = คนที่กำลังเรียกอยู่ ที่เหลือไปอยู่กล่อง "ผู้ที่เรียกไปแล้ว" ด้านขวา
+ * ตั้งได้ด้วย CALLED_ROWS (1 + จำนวนที่อยากโชว์ในกล่องขวา)
+ */
+function callingRows(): number {
+  return positiveInt(process.env.CALLED_ROWS, 5) + 1;
+}
 
 function toBoardRow(r: CashierRow, i: number, isCalling: boolean): BoardRow {
   return {
@@ -704,13 +711,16 @@ export async function getBoardQueue(date?: string): Promise<BoardData> {
   // "เรียกคิว" = คนที่ห้องเก็บเงินกดเรียกล่าสุด — คนละชุดกับคิวรอ ไม่ทับกัน
   const calledRows =
     data.source === "demo"
-      ? // โหมดสาธิตไม่มี sd_queue_calling จึงยืมแถวแรกมาโชว์
-        // แต่ต้องเปลี่ยน dept เป็น "ห้องเก็บเงิน" ให้เหมือนของจริง เพราะแผนกใน
-        // ส่วนเรียกคิวคือ "จุดที่ต้องเดินไป" ไม่ใช่แผนกที่ส่งมา
+      ? // โหมดสาธิตไม่มี sd_queue_calling จึงจำลองจากคนที่ "ชำระแล้ว"
+        // เอาคนท้ายสุดของกลุ่มที่จ่ายไปแล้ว = คนที่เพิ่งถูกเรียกล่าสุด
+        // แล้วกลับลำดับให้ใหม่สุดอยู่บน เลขคิวจะได้ต่อเนื่องกับ "คิวถัดไป"
+        // (ถ้าหยิบแถวแรกของทั้งชุด เลขคิวจะกระโดดจนดูเหมือนบั๊ก)
         data.rows
-          .slice(0, CALLING_ROWS)
+          .filter((r) => r.status === "ชำระแล้ว")
+          .slice(-callingRows())
+          .reverse()
           .map((r) => ({ ...r, dept: "ห้องเก็บเงิน" }))
-      : await queryCalled(data.date, CALLING_ROWS).catch((err) => {
+      : await queryCalled(data.date, callingRows()).catch((err) => {
           console.error("[cashier] queryCalled failed:", err);
           return [] as CashierRow[];
         });

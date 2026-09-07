@@ -1,14 +1,23 @@
 "use client";
 
 // app/QueueBoard.tsx
-// จอคิวห้องการเงินสำหรับคนไข้ดู (ออกแบบที่ 55" / 1080p ดูจากระยะ 4–6 เมตร)
+// จอคิวห้องเก็บเงินสำหรับคนไข้ดู (ออกแบบที่ 55" / 1080p ดูจากระยะ 4–6 เมตร)
 //
 // ไม่มีอะไรให้กดทั้งจอ — เจ้าหน้าที่ทำงานใน HOSxP ตามปกติ
 // จอแค่ตามข้อมูลจาก HOSxP แล้วประกาศชื่อคนที่ถึงคิวให้เอง
 //
+// ── ผังหน้าจอ ────────────────────────────────────────────────
+//   หัวจอ: โลโก้ + ชื่อ รพ.            |  วันที่ + นาฬิกา
+//   ┌──────────────────────────┬──────────────────┐
+//   │ กำลังเรียกให้เข้ารับบริการ    │ ผู้ที่เรียกไปแล้ว   │
+//   │  (เลขคิวใหญ่ + ชื่อ)        │  (ล่าสุดอยู่บน)     │
+//   ├──────────────────────────┤                  │
+//   │ คิวถัดไป (5 คิว)           │                  │
+//   └──────────────────────────┴──────────────────┘
+//   ท้ายจอ: ชื่อ รพ. · ระบบเรียกคิวผู้ป่วย
+//
 // ทุกขนาดคิดเป็น vh → เต็มจอพอดีไม่มี scroll และขยายตามเองบนจอ 4K
 import { useCallback, useEffect, useState } from "react";
-import { deptStyle } from "./dept";
 import { Icon } from "./Icon";
 import { useAnnouncer } from "./useAnnouncer";
 import type { BoardData, BoardRow, CallData } from "@/lib/cashier.types";
@@ -16,55 +25,33 @@ import type { BoardData, BoardRow, CallData } from "@/lib/cashier.types";
 interface Props {
   initialData: BoardData;
   boardTitle: string;
+  /** คำโปรยใต้ชื่อ รพ. */
+  boardSubtitle: string;
   rowLimit: number;
-  /** จำนวนคิวต่อ 1 ช่อง — 10 คิว ช่องละ 5 = 2 ช่อง */
-  rowsPerColumn: number;
   refreshSeconds: number;
   /** เปิดเสียงประกาศบนจอนี้ (ปิดด้วย ?sound=0 ถ้าเปิดหลายจอในห้องเดียวกัน) */
   sound: boolean;
   /** พูดกี่รอบต่อการเรียก 1 ครั้ง (TTS_REPEAT / ?repeat=) */
   ttsRepeat: number;
-  /** ข้อความประกาศ ใช้ {ชื่อ} แทนตำแหน่งชื่อคนไข้ (TTS_TEXT / ?say=) */
+  /** ข้อความประกาศ ใช้ {ชื่อ} {จุดบริการ} {คิว} (TTS_TEXT / ?say=) */
   ttsText: string;
   /** ประโยคปิดท้าย พูดครั้งเดียวตอนจบ ค่าว่าง = ไม่พูด (TTS_THANKS / ?thanks=) */
   ttsThanks: string;
 }
 
 const THAI_DAYS = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"];
-const THAI_MONTHS = [
-  "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-  "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม",
+const THAI_MONTHS_SHORT = [
+  "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.",
+  "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค.",
 ];
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-/**
- * รอมากี่นาทีแล้ว — คิดจาก "เวลาส่ง" (HH:MM) เทียบกับนาฬิกาของเครื่องที่เปิดจอ
- * จอเดิมมีช่อง "เวลารอ" แต่เป็นเลขปลอม (180 × ลำดับ ÷ 60) อันนี้ของจริง
- * คืน null เมื่อไม่มีเวลา หรือเวลาเพี้ยนไปอนาคต (นาฬิกาเครื่องไม่ตรง/ข้ามเที่ยงคืน)
- */
-function waitedMinutes(hhmm: string, now: Date): number | null {
-  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm || "");
-  if (!m) return null;
-  const mins =
-    now.getHours() * 60 + now.getMinutes() - (Number(m[1]) * 60 + Number(m[2]));
-  return mins >= 0 && mins < 24 * 60 ? mins : null;
-}
-
-/** "รอ 8 นาที" / "รอ 1 ชม. 12 นาที" — อ่านจากท้ายห้องต้องสั้นและเข้าใจทันที */
-function waitedLabel(mins: number): string {
-  if (mins < 1) return "เพิ่งส่งมา";
-  if (mins < 60) return `รอ ${mins} นาที`;
-  const h = Math.floor(mins / 60);
-  const r = mins % 60;
-  return r === 0 ? `รอ ${h} ชม.` : `รอ ${h} ชม. ${r} นาที`;
-}
-
 export default function QueueBoard({
   initialData,
   boardTitle,
+  boardSubtitle,
   rowLimit,
-  rowsPerColumn,
   refreshSeconds,
   sound,
   ttsRepeat,
@@ -74,23 +61,14 @@ export default function QueueBoard({
   const [data, setData] = useState<BoardData>(initialData);
   const [clock, setClock] = useState("");
   const [clockDate, setClockDate] = useState("");
-  // เวลาปัจจุบันแบบ Date — ใช้คำนวณ "รอมากี่นาที" ให้เดินตามนาฬิกาไปเอง
-  const [now, setNow] = useState<Date | null>(null);
+  const [shortDate, setShortDate] = useState("");
   const [offline, setOffline] = useState(false);
 
-  /**
-   * ประกอบประโยคที่จะให้เสียงอ่าน
-   *
-   * เว้นจังหวะด้วยจุดไข่ปลา — เครื่องอ่านจะหยุดหายใจตรงนั้น ทำให้แต่ละรอบ
-   * ไม่ติดกันเป็นพรืด คนไข้ที่นั่งอยู่ไกลจับใจความได้ทัน
-   * ปรับข้อความ/จำนวนรอบได้ที่ TTS_TEXT / TTS_REPEAT ใน .env
-   */
   /**
    * ประกอบประโยคที่ส่งให้เซิร์ฟเวอร์ไปสร้างเสียง
    *
    * รูปแบบเริ่มต้นยกมาจากจอเดิมเป๊ะ ๆ (docs/reference/getDoctorRoomQ.php):
    *   " ขอเชิญ " + CONCAT('คุณ', fname, ' ', lname) + " ที่ " + department + " ค่ะ "
-   * คำและเครื่องหมายเหมือนเดิมทุกตัว เสียงที่ออกมาจึงเหมือนจอเก่าทุกประการ
    * ปรับได้ที่ TTS_TEXT / TTS_REPEAT ใน .env ถ้าอยากเปลี่ยนทีหลัง
    */
   const buildAnnouncement = useCallback(
@@ -102,14 +80,12 @@ export default function QueueBoard({
         .replaceAll("{dept}", row.dept)
         .replaceAll("{คิว}", row.queueNo);
       const parts = Array(ttsRepeat).fill(line);
-      // ประโยคปิดท้ายพูดครั้งเดียว ไม่ซ้ำตามรอบ
       if (ttsThanks.trim()) parts.push(ttsThanks.trim());
       return parts.join(" ");
     },
     [ttsText, ttsRepeat, ttsThanks],
   );
 
-  // ประกาศชื่อคนที่ถึงคิวเอง ไม่ต้องมีใครกด
   const { needsUnlock, unlockSound } = useAnnouncer({
     enabled: sound,
     refreshSeconds,
@@ -119,10 +95,12 @@ export default function QueueBoard({
   useEffect(() => {
     const tick = () => {
       const d = new Date();
-      setNow(d);
       setClock(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
       setClockDate(
-        `วัน${THAI_DAYS[d.getDay()]}ที่ ${d.getDate()} ${THAI_MONTHS[d.getMonth()]} ${d.getFullYear() + 543}`,
+        `วัน${THAI_DAYS[d.getDay()]}ที่ ${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()].replace(".", "")} ${d.getFullYear() + 543}`,
+      );
+      setShortDate(
+        `${d.getDate()} ${THAI_MONTHS_SHORT[d.getMonth()]} ${d.getFullYear() + 543}`,
       );
     };
     tick();
@@ -134,8 +112,7 @@ export default function QueueBoard({
     try {
       const res = await fetch("/api/queue", { cache: "no-store" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json: BoardData = await res.json();
-      setData(json);
+      setData(await res.json());
       setOffline(false);
     } catch {
       // จอไม่มีคนดูแล — ค้างข้อมูลเดิมไว้ดีกว่าจอว่าง แล้วขึ้นจุดแดงเตือน
@@ -148,180 +125,187 @@ export default function QueueBoard({
     return () => clearInterval(id);
   }, [refresh, refreshSeconds]);
 
-  // "เรียกคิว" มาจาก sd_queue_calling ส่วน "คิวรอ" คือคนที่ยังไม่ถูกเรียก
-  // ทั้งสองชุดแยกกันมาจาก server แล้ว ไม่ต้องตัดหัวแถวออกเองอีก
   const called = data.called ?? [];
-  const waiting = data.rows;
-
-  // เติมช่องว่างให้ครบจำนวนแถว เพื่อให้ตำแหน่งแถวบนจอนิ่ง ไม่กระโดดขึ้นลง
-  const slots: (BoardRow | null)[] = Array.from(
-    { length: rowLimit },
-    (_, i) => waiting[i] ?? null,
-  );
-
-  // ตัดเป็นช่อง ๆ ช่องละ rowsPerColumn (10 คิว ช่องละ 5 = 2 ช่อง)
-  const columns: (BoardRow | null)[][] = [];
-  for (let i = 0; i < slots.length; i += rowsPerColumn) {
-    columns.push(slots.slice(i, i + rowsPerColumn));
-  }
-
-  const more = Math.max(0, data.waiting - data.rows.length);
+  const current = called[0] ?? null;   // กำลังเรียกอยู่ตอนนี้
+  const history = called.slice(1);     // เรียกไปแล้ว (ใหม่สุดอยู่บน)
+  const waiting = data.rows.slice(0, rowLimit);
 
   return (
-    <main className="tv">
-      <header className="tv-header">
-        <div className="tv-title">
-          <span className="tv-title-icon">
-            <Icon name="cashier" />
+    <main className="qb">
+      {/* ─── หัวจอ ─────────────────────────────────────────── */}
+      <header className="qb-header">
+        <div className="qb-brand">
+          <span className="qb-logo">
+            <Icon name="clinic" />
           </span>
-          <h1>{boardTitle}</h1>
+          <div>
+            <h1>{boardTitle}</h1>
+            {boardSubtitle && <p>{boardSubtitle}</p>}
+          </div>
         </div>
 
-        <div className="tv-clock">
-          <div className="tv-clock-time">
-            {clock}
-            {offline && <span className="tv-offline" title="เชื่อมต่อไม่ได้" />}
+        <div className="qb-time">
+          <div className="qb-date">
+            <Icon name="screening" /> {clockDate}
           </div>
-          <div className="tv-clock-date">{clockDate}</div>
+          <div className="qb-clock">
+            {clock}
+            {offline && <span className="qb-offline" title="เชื่อมต่อไม่ได้" />}
+          </div>
         </div>
       </header>
 
-      {/* ─── เรียกคิว — คนที่ถึงคิวตอนนี้ (ล่าสุดอยู่บน) ─── */}
-      {called.length > 0 && (
-        <section className="tv-calling">
-          <div className="tv-section-label">
-            <span>เรียกคิว</span>
-            <span className="tv-section-hint">เชิญมาที่ช่องรับเงิน</span>
-          </div>
-          <div className="tv-calling-list">
-            {called.map((c, i) => (
-              <div
-                key={c.id}
-                className={i === 0 ? "tv-calling-row" : "tv-calling-row tv-calling-row-prev"}
-              >
-                <span className="tv-calling-seq">{c.queueNo || "-"}</span>
-
-                <div className="tv-calling-main">
-                  <div className="tv-calling-name">{c.name}</div>
-                  {/* ⚠️ แผนกในส่วนนี้คนละความหมายกับในคิวรอ
-                      คิวรอ  = แผนกที่ "ส่งคนไข้มา" (ovst.last_dep)
-                      เรียกคิว = จุดที่ "ต้องเดินไป" (kskdepartment ของจุดที่กดเรียก)
-                      ถ้าใช้คำว่า "มาจาก" เหมือนกันทั้งสองที่ คนไข้จะเข้าใจผิดทันที */}
-                  <div className="tv-calling-meta">
-                    <span className="tv-meta-label">เรียก</span>
-                    <span className="tv-meta-time">{c.time}</span>
-                    <span aria-hidden>·</span>
-                    <span className="tv-meta-dept">
-                      <Icon name={deptStyle(c.dept).icon} />
-                      <span className="tv-meta-label">ไปที่</span> {c.dept}
-                    </span>
-                  </div>
+      {/* ─── เนื้อจอ ────────────────────────────────────────── */}
+      <div className="qb-body">
+        <div className="qb-left">
+          {/* กำลังเรียก */}
+          {current ? (
+            <section className="qb-now" key={current.id}>
+              <div className="qb-now-badge">
+                <div className="qb-now-label">
+                  <Icon name="sound" /> กำลังเรียกให้เข้ารับบริการ
                 </div>
-
-                <span className="tv-calling-at">
-                  {i === 0 ? (
-                    <>
-                      <span className="pulse-dot" /> เชิญชำระเงิน
-                    </>
-                  ) : (
-                    "เรียกไปแล้ว"
-                  )}
-                </span>
+                <div className="qb-now-no">{current.queueNo || "-"}</div>
               </div>
-            ))}
-          </div>
-        </section>
-      )}
 
-      <div className="tv-section-label tv-section-label-wait">
-        <span>คิวรอ</span>
-        {data.waiting > 0 && (
-          <span className="tv-section-count">{data.waiting} คน</span>
-        )}
-      </div>
-
-      {waiting.length === 0 ? (
-        <div className="tv-empty">
-          <div className="tv-empty-icon">
-            <Icon name="cashier" />
-          </div>
-          <div className="tv-empty-title">ไม่มีคิวรอ</div>
-          <div className="tv-empty-sub">
-            รายชื่อจะขึ้นเองเมื่อมีผู้ป่วยถูกส่งมาห้องเก็บเงิน
-          </div>
-        </div>
-      ) : (
-      <div className="tv-columns">
-        {columns.map((col, c) => (
-          <div className="tv-column" key={c}>
-            {col.map((row, i) => {
-              const seq = c * rowsPerColumn + i + 1;
-              if (!row)
-                return <div key={`empty-${seq}`} className="tv-row tv-row-empty" />;
-
-              const waited = now ? waitedMinutes(row.time, now) : null;
-
-              return (
-                <div key={row.id} className="tv-row">
-                  {/* เลขคิวจริงจาก HOSxP (ovst.oqueue) — ไม่มีเลขคิวค่อยใช้ลำดับบนจอ */}
-                  <span className="tv-seq">
-                    <span className="tv-seq-label">คิว</span>
-                    <span className="tv-seq-no">{row.queueNo || seq}</span>
+              <div className="qb-now-main">
+                <div className="qb-now-name">{current.name}</div>
+                <div className="qb-now-dept">
+                  <Icon name="medicine" /> {current.dept}
+                </div>
+                <div className="qb-now-meta">
+                  <span>
+                    <Icon name="screening" /> เวลาเรียกคิว
+                    <b>{current.time} น.</b>
                   </span>
+                  <span className="qb-sep" />
+                  <span>
+                    <Icon name="card" /> วันที่
+                    <b>{shortDate}</b>
+                  </span>
+                </div>
+              </div>
 
-                  <div className="tv-main">
-                    <div className="tv-name">{row.name}</div>
-                    <div className="tv-meta">
-                      <span className="tv-meta-label">ส่งมา</span>
-                      <span className="tv-meta-time">{row.time}</span>
-                      <span aria-hidden>·</span>
-                      <span className="tv-meta-dept">
-                        <Icon name={deptStyle(row.dept).icon} />
-                        <span className="tv-meta-label">จาก</span> {row.dept}
-                      </span>
+              <div className="qb-now-cta">
+                <span className="qb-pulse" />
+                เชิญเข้ารับบริการ
+              </div>
+            </section>
+          ) : (
+            <section className="qb-now qb-now-empty">
+              <div className="qb-empty-icon">
+                <Icon name="cashier" />
+              </div>
+              <div>
+                <div className="qb-empty-title">ยังไม่มีการเรียกคิว</div>
+                <div className="qb-empty-sub">
+                  ชื่อจะขึ้นเองเมื่อเจ้าหน้าที่กดเรียกคิวในระบบ
+                </div>
+              </div>
+            </section>
+          )}
+
+          {/* คิวถัดไป */}
+          <section className="qb-next">
+            <div className="qb-sec-head">
+              <span className="qb-sec-icon">
+                <Icon name="screening" />
+              </span>
+              <h2>คิวถัดไป</h2>
+              <span className="qb-chip">{data.waiting} คิว</span>
+            </div>
+
+            <div className="qb-next-list">
+              {waiting.length === 0 && (
+                <div className="qb-next-none">ไม่มีคิวรอ</div>
+              )}
+              {waiting.map((row: BoardRow) => (
+                <div className="qb-next-row" key={row.id}>
+                  <div className="qb-next-no">
+                    <span>ลำดับที่</span>
+                    <b>{row.queueNo || "-"}</b>
+                  </div>
+
+                  <div className="qb-next-main">
+                    <div className="qb-next-name">{row.name}</div>
+                    <div className="qb-next-dept">
+                      <Icon name="medicine" /> {row.dept}
                     </div>
                   </div>
 
-                  <div className="tv-right">
-                    {/* คนไข้อยากรู้ที่สุดคือ "อีกกี่คิวถึงเรา" กับ "รอมานานแค่ไหนแล้ว" */}
-                    <span className="tv-turn">ที่ {seq}</span>
-                    {waited !== null && (
-                      <span className="tv-waited">{waitedLabel(waited)}</span>
-                    )}
+                  <div className="qb-next-time">
+                    <Icon name="screening" /> ส่งมา <b>{row.time} น.</b>
+                  </div>
+
+                  <span className="qb-tag">รอเรียก</span>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* ─── ผู้ที่เรียกไปแล้ว ──────────────────────────── */}
+        <aside className="qb-side">
+          <div className="qb-sec-head">
+            <span className="qb-sec-icon qb-sec-icon-done">
+              <Icon name="clinic" />
+            </span>
+            <h2>ผู้ที่เรียกไปแล้ว</h2>
+            <span className="qb-chip">{history.length} ราย</span>
+          </div>
+
+          <div className="qb-done-list">
+            {history.length === 0 && (
+              <div className="qb-next-none">ยังไม่มี</div>
+            )}
+            {history.map((row) => (
+              <div className="qb-done-row" key={row.id}>
+                <div className="qb-done-no">{row.queueNo || "-"}</div>
+                <div className="qb-done-main">
+                  <div className="qb-done-name">{row.name}</div>
+                  <div className="qb-done-dept">
+                    <Icon name="medicine" /> {row.dept}
                   </div>
                 </div>
-              );
-            })}
+                <div className="qb-done-time">{row.time} น.</div>
+              </div>
+            ))}
           </div>
-        ))}
+
+          <div className="qb-thanks">
+            <div className="qb-thanks-head">
+              <Icon name="pediatrics" /> ขอบคุณที่ใช้บริการ
+            </div>
+            <p>หากมีอาการผิดปกติ กรุณาแจ้งเจ้าหน้าที่ทันทีนะครับ</p>
+          </div>
+        </aside>
       </div>
-      )}
+
+      {/* ─── ท้ายจอ ────────────────────────────────────────── */}
+      <footer className="qb-footer">
+        <span>
+          <Icon name="clinic" /> {boardTitle}
+        </span>
+        <span className="qb-foot-sep" />
+        <span>
+          <Icon name="screening" /> ระบบเรียกคิวผู้ป่วย
+        </span>
+        <span className="qb-foot-right">
+          {data.source === "demo" && <b className="qb-demo">โหมดสาธิต</b>}
+          ดูแลสุขภาพ…ไปด้วยกัน
+        </span>
+      </footer>
 
       {needsUnlock && (
         /* ต้องเป็น <button> จริงและโฟกัสไว้ให้เอง — เบราว์เซอร์ของทีวีเดินด้วย
-           ปุ่มทิศทาง ปุ่ม OK จะ "กด" ได้เฉพาะสิ่งที่โฟกัสอยู่ ถ้าเป็น <div> เฉย ๆ
-           กด OK แล้วจะไม่เกิดอะไรขึ้นเลย */
-        <button
-          type="button"
-          className="tv-unlock"
-          autoFocus
-          onClick={unlockSound}
-        >
+           ปุ่มทิศทาง ปุ่ม OK จะ "กด" ได้เฉพาะสิ่งที่โฟกัสอยู่ */
+        <button type="button" className="qb-unlock" autoFocus onClick={unlockSound}>
           <Icon name="sound" />
           <span>
             กด <b>ปุ่ม OK ตรงกลางรีโมต</b> หนึ่งครั้ง เพื่อเปิดเสียงเรียกคิว
           </span>
         </button>
       )}
-
-      <footer className="tv-footer">
-        <span>
-          รอเรียกทั้งหมด <b>{data.waiting}</b> ราย
-          {more > 0 && <> · ยังไม่ขึ้นจออีก <b>{more}</b> ราย</>}
-        </span>
-        <span>เรียกไปแล้ววันนี้ <b>{data.done}</b> ราย</span>
-        {data.source === "demo" && <span className="tv-demo">โหมดสาธิต</span>}
-      </footer>
     </main>
   );
 }

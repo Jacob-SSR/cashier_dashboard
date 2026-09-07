@@ -6,7 +6,6 @@ import QueueBoard from "./QueueBoard";
 import {
   getBoardQueue,
   boardRowLimit,
-  boardRowsPerColumn,
 } from "@/lib/cashier.service";
 import type { BoardData } from "@/lib/cashier.types";
 
@@ -43,8 +42,10 @@ export default async function Page({
   const ttsThanks = thanksRaw ?? process.env.TTS_THANKS ?? "ขอบคุณค่ะ";
 
 
-  const boardTitle =
-    process.env.BOARD_TITLE || "ห้องเก็บเงินโรงพยาบาลพลับพลาชัย";
+  const boardTitle = process.env.BOARD_TITLE || "โรงพยาบาลพลับพลาชัย";
+  // คำโปรยใต้ชื่อ รพ. — ตั้งเป็นค่าว่างเพื่อไม่ให้ขึ้น
+  const boardSubtitle =
+    process.env.BOARD_SUBTITLE ?? "บริการด้วยใจ ห่วงใยสุขภาพประชาชน";
   const refreshSeconds = Number(process.env.REFRESH_SECONDS ?? 15);
 
   let initialData: BoardData;
@@ -68,8 +69,8 @@ export default async function Page({
     <QueueBoard
       initialData={initialData}
       boardTitle={boardTitle}
+      boardSubtitle={boardSubtitle}
       rowLimit={boardRowLimit()}
-      rowsPerColumn={boardRowsPerColumn()}
       refreshSeconds={refreshSeconds}
       sound={sound}
       ttsRepeat={ttsRepeat}
