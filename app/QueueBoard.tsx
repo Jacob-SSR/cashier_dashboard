@@ -298,8 +298,8 @@ export default function QueueBoard({
 
       {needsUnlock && (
         <div className="tv-unlock">
-          <Icon name="sound" /> เบราว์เซอร์บล็อกเสียงอยู่ — เปิดจอด้วย start-tv.bat
-          เพื่อให้ประกาศเองโดยไม่ต้องแตะจอ
+          <Icon name="sound" /> เบราว์เซอร์บล็อกเสียงอยู่ — รัน scripts\allow-sound.reg
+          ครั้งเดียว แล้วเปิดเบราว์เซอร์ใหม่
         </div>
       )}
 
