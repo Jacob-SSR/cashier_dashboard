@@ -61,7 +61,7 @@ export class AudioQueueManager {
    * เบราว์เซอร์นับว่าเป็น user gesture แล้วจะยอมให้เล่นเสียงได้ตลอดไป
    * เล่นไฟล์เงียบสั้น ๆ 1 ครั้งเพื่อ "จอง" สิทธิ์ไว้
    */
-  async unlock(): Promise<boolean> {
+  async unlock(fromGesture = false): Promise<boolean> {
     if (this.unlocked) return true;
     // กำลังประกาศอยู่ = เบราว์เซอร์ยอมให้เล่นแล้ว ไม่ต้องไปยุ่งอะไรอีก
     if (this.playing) {
@@ -70,25 +70,50 @@ export class AudioQueueManager {
     }
 
     if (!this.unlockEl) this.unlockEl = this.makeEl();
-    const el = this.unlockEl;
+    const probe = this.unlockEl;
+    const main = this.element();
+
+    // ⚠️ ต้องยิง play() ของทั้งสอง element "ก่อน await ใด ๆ"
+    //    เบราว์เซอร์นับเฉพาะ play() ที่ถูกเรียกใน task เดียวกับการกดปุ่ม
+    //    ถ้ารอ await ตัวแรกเสร็จค่อยยิงตัวที่สอง ตัวที่สองจะหลุด gesture แล้วโดนบล็อก
+    probe.src = SILENT_MP3;
+    probe.muted = true;
+    main.src = SILENT_MP3;
+    main.muted = true;
+
+    const pProbe = probe.play();
+    const pMain = main.play();
+
     try {
-      el.src = SILENT_MP3;
-      el.muted = true;
-      await el.play();
-      el.pause();
-      el.currentTime = 0;
-      this.unlocked = true;
-      // ปลดล็อกให้ element ที่ใช้ประกาศจริงด้วย (เป็นคนละตัวกัน)
-      // ทำในจังหวะเดียวกับ gesture เบราว์เซอร์ถึงจะยอม
-      const main = this.element();
-      main.src = SILENT_MP3;
-      main.muted = true;
-      await main.play().catch(() => {});
+      await pProbe;
+      probe.pause();
+      probe.currentTime = 0;
+
+      // element หลักอาจล้มได้โดยที่ probe ผ่าน — ไม่ถือว่าล้มเหลวทั้งหมด
+      await pMain.catch(() => {});
       main.pause();
       main.currentTime = 0;
       main.muted = false;
+
+      this.unlocked = true;
       return true;
     } catch {
+      main.muted = false;
+
+      // ⚠️ มาถึงตรงนี้ไม่ได้แปลว่าเบราว์เซอร์บล็อกเสมอไป
+      //    ไฟล์เงียบที่ใช้ทดสอบเป็น MP3 ซึ่งบางเบราว์เซอร์ถอดรหัสไม่ได้
+      //    (Chromium รุ่นไม่มี codec ลิขสิทธิ์ ฯลฯ) แล้ว play() จะ reject
+      //    ทั้งที่ประกาศจริงเล่นได้ปกติ
+      //
+      //    ถ้าเป็นการ "กดจริงของผู้ใช้" ให้ถือว่าปลดล็อกแล้ว เพราะการกดคือ
+      //    สิ่งเดียวที่นโยบาย autoplay ต้องการ ไม่งั้นแถบให้กดจะค้างตลอด
+      //    กดแล้วกดอีกก็ไม่หาย — ซึ่งแย่กว่ามาก
+      //    ถ้าสุดท้ายเล่นไม่ได้จริง playOne() จะเจอ NotAllowedError
+      //    แล้วตั้งกลับเป็นยังไม่ปลดล็อกให้เอง แถบก็จะกลับมา
+      if (fromGesture) {
+        this.unlocked = true;
+        return true;
+      }
       return false;
     }
   }

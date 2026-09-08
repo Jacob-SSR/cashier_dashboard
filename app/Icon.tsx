@@ -26,6 +26,11 @@ export type IconName =
   | "screening"  // คัดกรอง / ซักประวัติ
   | "lab"        // ห้องแล็บ / ชันสูตร
   | "xray"       // รังสี / เอกซเรย์
+  | "calendar"   // วันที่
+  | "clock"      // เวลา
+  | "list"       // รายการคิวรอ
+  | "check"      // เรียกไปแล้ว / เสร็จแล้ว
+  | "heart"      // ข้อความขอบคุณ
   | "sound"      // แถบเปิดเสียง
   | "play";      // ปุ่มฟังตัวอย่างเสียง (/voices)
 
@@ -129,6 +134,35 @@ const PATHS: Record<IconName, React.ReactNode> = {
       <path d="M9 10.2h6M9.6 13.4h4.8" />
     </>
   ),
+  calendar: (
+    <>
+      <rect x="3.2" y="5" width="17.6" height="15.8" rx="2.6" />
+      <path d="M3.2 9.6h17.6" />
+      <path d="M8 3.2v3.6M16 3.2v3.6" />
+      <path d="M7.6 13.4h2.2M14.2 13.4h2.2M7.6 17h2.2M14.2 17h2.2" />
+    </>
+  ),
+  clock: (
+    <>
+      <circle cx="12" cy="12" r="8.8" />
+      <path d="M12 6.8V12l3.6 2.2" />
+    </>
+  ),
+  list: (
+    <>
+      <path d="M8.6 6.4h11.8M8.6 12h11.8M8.6 17.6h11.8" />
+      <path d="M4.2 6.4h.02M4.2 12h.02M4.2 17.6h.02" />
+    </>
+  ),
+  check: (
+    <>
+      <circle cx="12" cy="12" r="8.8" />
+      <path d="M8.2 12.3 10.9 15l4.9-5.4" />
+    </>
+  ),
+  heart: (
+    <path d="M12 20.4S3.8 15 3.8 9.3a4.3 4.3 0 0 1 8.2-1.8 4.3 4.3 0 0 1 8.2 1.8c0 5.7-8.2 11.1-8.2 11.1z" />
+  ),
   sound: (
     <>
       <path d="M4 9.4h3.2L11.8 5.6v12.8L7.2 14.6H4z" />
@@ -144,6 +178,7 @@ const FILLED: ReadonlySet<IconName> = new Set<IconName>([
   "dental",
   "obstetrics",
   "orthopedic",
+  "heart",
   "play",
 ]);
 

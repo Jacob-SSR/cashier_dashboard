@@ -18,6 +18,7 @@
 //
 // ทุกขนาดคิดเป็น vh → เต็มจอพอดีไม่มี scroll และขยายตามเองบนจอ 4K
 import { useCallback, useEffect, useState } from "react";
+import { deptStyle } from "./dept";
 import { Icon } from "./Icon";
 import { useAnnouncer } from "./useAnnouncer";
 import type { BoardData, BoardRow, CallData } from "@/lib/cashier.types";
@@ -155,7 +156,7 @@ export default function QueueBoard({
 
         <div className="qb-time">
           <div className="qb-date">
-            <Icon name="screening" /> {clockDate}
+            <Icon name="calendar" /> {clockDate}
           </div>
           <div className="qb-clock">
             {clock}
@@ -180,16 +181,16 @@ export default function QueueBoard({
               <div className="qb-now-main">
                 <div className="qb-now-name">{current.name}</div>
                 <div className="qb-now-dept">
-                  <Icon name="medicine" /> {current.dept}
+                  <Icon name={deptStyle(current.dept).icon} /> {current.dept}
                 </div>
                 <div className="qb-now-meta">
                   <span>
-                    <Icon name="screening" /> เวลาเรียกคิว
+                    <Icon name="clock" /> เวลาเรียกคิว
                     <b>{current.time} น.</b>
                   </span>
                   <span className="qb-sep" />
                   <span>
-                    <Icon name="card" /> วันที่
+                    <Icon name="calendar" /> วันที่
                     <b>{shortDate}</b>
                   </span>
                 </div>
@@ -218,7 +219,7 @@ export default function QueueBoard({
           <section className="qb-next">
             <div className="qb-sec-head">
               <span className="qb-sec-icon">
-                <Icon name="screening" />
+                <Icon name="list" />
               </span>
               <h2>คิวถัดไป</h2>
               <span className="qb-chip">{data.waiting} คิว</span>
@@ -229,21 +230,21 @@ export default function QueueBoard({
                 <div className="qb-next-none">ไม่มีคิวรอ</div>
               )}
               {waiting.map((row: BoardRow) => (
+                /* ⚠️ ไม่โชว์เลขคิวในรายการนี้
+                   เลขที่ได้มาคือ ovst.oqueue ซึ่งแต่ละคลินิกนับแยกกัน เลขจึงกระโดด
+                   (25 มาก่อน 153 มาก่อน 44) คนไข้เห็นแล้วเข้าใจผิดว่าจอเรียงผิด
+                   หรือถูกแซงคิว ทั้งที่จริงเรียงตามเวลาที่ถูกส่งมาถูกต้องแล้ว
+                   จึงเหลือแค่ชื่อกับเวลา ซึ่งเป็นสิ่งที่คนไข้ใช้ยืนยันตัวเองได้จริง */
                 <div className="qb-next-row" key={row.id}>
-                  <div className="qb-next-no">
-                    <span>ลำดับที่</span>
-                    <b>{row.queueNo || "-"}</b>
-                  </div>
-
                   <div className="qb-next-main">
                     <div className="qb-next-name">{row.name}</div>
                     <div className="qb-next-dept">
-                      <Icon name="medicine" /> {row.dept}
+                      <Icon name={deptStyle(row.dept).icon} /> {row.dept}
                     </div>
                   </div>
 
                   <div className="qb-next-time">
-                    <Icon name="screening" /> ส่งมา <b>{row.time} น.</b>
+                    <Icon name="clock" /> ส่งมา <b>{row.time} น.</b>
                   </div>
 
                   <span className="qb-tag">รอเรียก</span>
@@ -257,7 +258,7 @@ export default function QueueBoard({
         <aside className="qb-side">
           <div className="qb-sec-head">
             <span className="qb-sec-icon qb-sec-icon-done">
-              <Icon name="clinic" />
+              <Icon name="check" />
             </span>
             <h2>ผู้ที่เรียกไปแล้ว</h2>
             <span className="qb-chip">{history.length} ราย</span>
@@ -273,7 +274,7 @@ export default function QueueBoard({
                 <div className="qb-done-main">
                   <div className="qb-done-name">{row.name}</div>
                   <div className="qb-done-dept">
-                    <Icon name="medicine" /> {row.dept}
+                    <Icon name={deptStyle(row.dept).icon} /> {row.dept}
                   </div>
                 </div>
                 <div className="qb-done-time">{row.time} น.</div>
@@ -283,7 +284,7 @@ export default function QueueBoard({
 
           <div className="qb-thanks">
             <div className="qb-thanks-head">
-              <Icon name="pediatrics" /> ขอบคุณที่ใช้บริการ
+              <Icon name="heart" /> ขอบคุณที่ใช้บริการ
             </div>
             <p>หากมีอาการผิดปกติ กรุณาแจ้งเจ้าหน้าที่ทันทีนะครับ</p>
           </div>
@@ -297,7 +298,7 @@ export default function QueueBoard({
         </span>
         <span className="qb-foot-sep" />
         <span>
-          <Icon name="screening" /> ระบบเรียกคิวผู้ป่วย
+          <Icon name="list" /> ระบบเรียกคิวผู้ป่วย
         </span>
         <span className="qb-foot-right">
           {data.source === "demo" && <b className="qb-demo">โหมดสาธิต</b>}
@@ -311,7 +312,7 @@ export default function QueueBoard({
         <button type="button" className="qb-unlock" autoFocus onClick={unlockSound}>
           <Icon name="sound" />
           <span>
-            กด <b>ปุ่ม OK ตรงกลางรีโมต</b> หนึ่งครั้ง เพื่อเปิดเสียงเรียกคิว
+            <b>กดปุ่มอะไรก็ได้บนรีโมต</b> หรือแตะหน้าจอ หนึ่งครั้ง เพื่อเปิดเสียงเรียกคิว
           </span>
         </button>
       )}

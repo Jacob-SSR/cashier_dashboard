@@ -55,7 +55,8 @@ export function useAnnouncer({
 
   /** ปุ่มบนจอเรียกอันนี้ — ต้องอยู่ในจังหวะที่ผู้ใช้เพิ่งกดปุ่มจริง ๆ */
   const unlockSound = useCallback(async () => {
-    const ok = await getAudio()?.unlock();
+    // true = มาจากการกดจริงของผู้ใช้
+    const ok = await getAudio()?.unlock(true);
     if (ok) setNeedsUnlock(false);
   }, [getAudio]);
 
@@ -139,9 +140,35 @@ export function useAnnouncer({
 
     void attempt(10_000);
 
+    /**
+     * ★ กดตรงไหนก็ได้ทั้งจอ = ปลดล็อกเสียง
+     *
+     * ไม่ต้องเล็งปุ่มให้ตรง — คลิกเมาส์ แตะจอ กดปุ่มอะไรก็ได้บนรีโมต
+     * (ลูกศร, OK, ตัวเลข, ปุ่มสี) ล้วนนับเป็น user gesture ทั้งหมด
+     *
+     * ดักที่ระดับ document แบบ capture เพื่อให้ทำงานก่อนตัวอื่นเสมอ
+     * และต้องเรียก unlock() แบบ "ไม่ await ก่อนหน้า" เพราะเบราว์เซอร์นับ
+     * เฉพาะ play() ที่ถูกเรียกใน task เดียวกับการกดเท่านั้น
+     */
+    const onGesture = () => {
+      const mgr = getAudio();
+      if (!mgr || mgr.isUnlocked()) return;
+      void mgr.unlock(true).then((ok) => {
+        if (!stop && ok) setNeedsUnlock(false);
+      });
+    };
+
+    const events = ["pointerdown", "mousedown", "touchstart", "keydown", "click"] as const;
+    for (const ev of events) {
+      document.addEventListener(ev, onGesture, { capture: true, passive: true });
+    }
+
     return () => {
       stop = true;
       clearTimeout(timer);
+      for (const ev of events) {
+        document.removeEventListener(ev, onGesture, { capture: true });
+      }
     };
   }, [enabled, getAudio]);
 
