@@ -654,16 +654,31 @@ async function queryCalled(date: string, limit: number): Promise<CashierRow[]> {
     LIMIT ${Math.max(1, Math.min(10, Math.trunc(limit)))}
   `;
 
+  // ★ เลขที่โชว์บนจอ = "ลำดับการเรียกของวันนี้" 1, 2, 3, ... ไม่ใช่ ovst.oqueue
+  //
+  //   oqueue แต่ละคลินิกนับแยกกัน เลขจึงกระโดดมั่ว (31 แล้ว 8 แล้ว 42 แล้ว 94)
+  //   คนไข้เห็นแล้วนึกว่าจอเรียงผิดหรือถูกแซงคิว
+  //   นับจากจำนวนครั้งที่ถูกกดเรียกทั้งหมดของวัน แล้วไล่ถอยหลังตามลำดับที่ดึงมา
+  //   (แถวแรกคือคนล่าสุด จึงได้เลขมากสุด) เลขบนจอจะเรียงสวยเสมอ
+  const [countRows] = (await getDb().query(
+    `SELECT COUNT(*) AS n FROM sd_queue_calling sc
+      WHERE sc.sd_queue_calling_curdep IN (${depCodes.map(() => "?").join(",")})
+        AND DATE(sc.sd_queue_calling_datetime) = ?`,
+    [...depCodes, date],
+  )) as unknown as [{ n: number }[], unknown];
+  const total = num(countRows?.[0]?.n);
+
   const [rows] = (await getDb().query(sql, [...depCodes, date])) as unknown as [
     Row[],
     unknown,
   ];
 
-  return rows.map((r) => ({
+  return rows.map((r, i) => ({
     id: clean(r.vn),
     vn: clean(r.vn),
     hn: clean(r.hn),
-    queueNo: toQueueNo(r.queue_no),
+    // total - i → คนล่าสุดได้เลขสูงสุด ไล่ลงตามลำดับที่ถูกเรียกจริง
+    queueNo: String(Math.max(1, total - i)),
     priority: num(r.pt_priority),
     name: clean(r.patient_name) || clean(r.hn),
     callName: clean(r.call_name) || clean(r.patient_name),
@@ -715,11 +730,18 @@ export async function getBoardQueue(date?: string): Promise<BoardData> {
         // เอาคนท้ายสุดของกลุ่มที่จ่ายไปแล้ว = คนที่เพิ่งถูกเรียกล่าสุด
         // แล้วกลับลำดับให้ใหม่สุดอยู่บน เลขคิวจะได้ต่อเนื่องกับ "คิวถัดไป"
         // (ถ้าหยิบแถวแรกของทั้งชุด เลขคิวจะกระโดดจนดูเหมือนบั๊ก)
-        data.rows
-          .filter((r) => r.status === "ชำระแล้ว")
-          .slice(-callingRows())
-          .reverse()
-          .map((r) => ({ ...r, dept: "ห้องเก็บเงิน" }))
+        (() => {
+          const paid = data.rows.filter((r) => r.status === "ชำระแล้ว");
+          return paid
+            .slice(-callingRows())
+            .reverse()
+            .map((r, i) => ({
+              ...r,
+              dept: "ห้องเก็บเงิน",
+              // เลขลำดับการเรียกเหมือนของจริง คนล่าสุดได้เลขสูงสุด
+              queueNo: String(Math.max(1, paid.length - i)),
+            }));
+        })()
       : await queryCalled(data.date, callingRows()).catch((err) => {
           console.error("[cashier] queryCalled failed:", err);
           return [] as CashierRow[];
