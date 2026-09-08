@@ -403,19 +403,25 @@ body {
 }
 
 .qb-brand h1 {
-  font-size: 4.6vh;
+  font-size: 4.2vh;
   font-weight: 800;
-  line-height: 1.3;
+  line-height: 1.25;
   white-space: nowrap;
   color: var(--g-900);
 }
 
+/* วิสัยทัศน์ใต้ชื่อ รพ. — รองรับหลายบรรทัด บรรทัดแรกเน้นกว่า */
 .qb-brand p {
-  font-size: 2.2vh;
+  font-size: 2vh;
   font-weight: 500;
-  line-height: 1.4;
+  line-height: 1.35;
   color: var(--ink-2);
   white-space: nowrap;
+}
+
+.qb-vision-lead {
+  font-weight: 700;
+  color: var(--g-700);
 }
 
 .qb-time { text-align: right; flex-shrink: 0; }

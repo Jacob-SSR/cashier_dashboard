@@ -44,8 +44,10 @@ export default async function Page({
 
   const boardTitle = process.env.BOARD_TITLE || "โรงพยาบาลพลับพลาชัย";
   // คำโปรยใต้ชื่อ รพ. — ตั้งเป็นค่าว่างเพื่อไม่ให้ขึ้น
+  // วิสัยทัศน์ของ รพ. — ขึ้นบรรทัดใหม่ด้วย | (ตั้งเป็นค่าว่างเพื่อไม่ให้ขึ้น)
   const boardSubtitle =
-    process.env.BOARD_SUBTITLE ?? "บริการด้วยใจ ห่วงใยสุขภาพประชาชน";
+    process.env.BOARD_SUBTITLE ??
+    "โรงพยาบาลชุมชนคุณภาพสูง|การแพทย์ทันสมัย สุขใจใกล้บ้าน";
   const refreshSeconds = Number(process.env.REFRESH_SECONDS ?? 15);
 
   let initialData: BoardData;

@@ -140,7 +140,16 @@ export default function QueueBoard({
           </span>
           <div>
             <h1>{boardTitle}</h1>
-            {boardSubtitle && <p>{boardSubtitle}</p>}
+            {/* วิสัยทัศน์ — ขึ้นบรรทัดใหม่ได้ด้วย | ใน BOARD_SUBTITLE */}
+            {boardSubtitle
+              .split("|")
+              .map((line) => line.trim())
+              .filter(Boolean)
+              .map((line, i) => (
+                <p key={i} className={i === 0 ? "qb-vision-lead" : undefined}>
+                  {line}
+                </p>
+              ))}
           </div>
         </div>
 
