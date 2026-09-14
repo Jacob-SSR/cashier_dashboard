@@ -48,7 +48,9 @@ export default async function Page({
   const boardSubtitle =
     process.env.BOARD_SUBTITLE ??
     "โรงพยาบาลชุมชนคุณภาพสูง|การแพทย์ทันสมัย สุขใจใกล้บ้าน";
-  const refreshSeconds = Number(process.env.REFRESH_SECONDS ?? 15);
+  // เดิม default 15 วิ — เสียงเรียกจะออกช้ากว่าที่เจ้าหน้าที่กดจริงได้ถึง 15 วิ
+  // ลดเหลือ 5 วิ ให้จอเห็นคนที่ถูกเรียกเร็วขึ้น (ปรับผ่าน REFRESH_SECONDS ได้ตามภาระ DB)
+  const refreshSeconds = Number(process.env.REFRESH_SECONDS ?? 5);
 
   let initialData: BoardData;
   try {

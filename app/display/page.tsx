@@ -21,7 +21,8 @@ export default async function DisplayPage({
   return (
     <CallDisplay
       hospitalName={process.env.HOSPITAL_NAME || "โรงพยาบาลพลับพลาชัย"}
-      refreshSeconds={Number(process.env.REFRESH_SECONDS ?? 15)}
+      // เดิม default 15 วิ ทำให้เสียงเรียกช้ากว่าที่กดจริงได้ถึง 15 วิ — ลดเหลือ 5 วิ
+      refreshSeconds={Number(process.env.REFRESH_SECONDS ?? 5)}
       sound={sound}
     />
   );

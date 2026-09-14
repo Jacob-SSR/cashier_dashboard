@@ -7,17 +7,10 @@
 // เรียกได้ 2 แบบ
 //   GET  /api/tts?text=...    ← จอใช้แบบนี้ ใส่ใน <audio src> ได้ตรง ๆ
 //   POST /api/tts  {"text":"..."}
-import { createLegacyThaiTTS, looksLikeMp3 } from "@/lib/tts/legacyThaiTTS";
+import { createLegacyThaiTTS, looksLikeMp3, ttsSpeed } from "@/lib/tts/legacyThaiTTS";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
-
-/** ความเร็วเสียง 1 = เท่าจอเดิมเป๊ะ ๆ, ต่ำกว่านั้นช้าลง (Google รับ 0.1–1) */
-function ttsSpeed(raw: string | null): number {
-  const n = Number(raw ?? process.env.TTS_RATE ?? 1);
-  if (!Number.isFinite(n)) return 1;
-  return Math.min(1, Math.max(0.1, n));
-}
 
 /**
  * ?debug=1 — คืน JSON บอกว่าได้ไฟล์อะไรมาจาก Google แทนการส่งเสียง

@@ -15,6 +15,17 @@
 const MAX_CHARS = 180;
 
 /**
+ * ความเร็วเสียง 1 = เท่าจอเดิมเป๊ะ ๆ, ต่ำกว่านั้นช้าลง (Google รับ 0.1–1)
+ * ★ ใช้ตัวเดียวกันทั้งฝั่ง route (ตอนประกาศจริง) และฝั่งที่ prefetch ล่วงหน้า
+ *   ไม่งั้นค่า speed ไม่ตรงกัน → cache key ต่างกัน → prefetch ไปแล้วแต่ cache miss ซ้ำตอนประกาศจริง
+ */
+export function ttsSpeed(raw: string | number | null | undefined): number {
+  const n = Number(raw ?? process.env.TTS_RATE ?? 1);
+  if (!Number.isFinite(n)) return 1;
+  return Math.min(1, Math.max(0.1, n));
+}
+
+/**
  * ยุคที่จอเดิมเขียน (PHP file_get_contents) Google ยังไม่เช็ค User-Agent
  * เดี๋ยวนี้ถ้าไม่ส่งไปจะโดน 403 — ต้องใส่ให้เหมือนเบราว์เซอร์
  */

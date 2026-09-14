@@ -43,6 +43,7 @@ import { getDb, isDbConfigured } from "@/lib/db";
 import { demoRows } from "@/lib/cashier.demo";
 import { maskSurname } from "@/lib/mask";
 import { createHash } from "node:crypto";
+import { createLegacyThaiTTS, ttsSpeed } from "@/lib/tts/legacyThaiTTS";
 import type {
   BoardData,
   BoardRow,
@@ -149,6 +150,11 @@ interface Row {
   call_name: string;
   dept_name: string;
   send_time: string;
+  /**
+   * เวลาที่กดเรียกแบบเต็ม (ถึงวินาที) — มีเฉพาะผลลัพธ์จาก queryCalled()
+   * ใช้ทำ key กันเรียกซ้ำ (ดู CashierRow.callSeq) ไม่ใช้แสดงผล
+   */
+  call_seq?: string;
   /** ชื่อสถานะจาก ovstost — ใช้ตัดคนที่ออกจากระบบไปแล้วออกจากจอ */
   status_name: string;
   /** ลำดับความสำคัญของคนไข้ (ผู้สูงอายุ/พระ/ฉุกเฉิน) — มากกว่า = เรียกก่อน */
@@ -643,6 +649,9 @@ async function queryCalled(date: string, limit: number): Promise<CashierRow[]> {
       ''                                         AS status_name,
       COALESCE(o.pt_priority, 0)                 AS pt_priority,
       TIME_FORMAT(sc.sd_queue_calling_datetime, '%H:%i') AS send_time,
+      -- เก็บเวลาแบบเต็มไว้แยกจาก send_time (ปัดเหลือนาทีไปแล้ว)
+      -- ใช้ทำ key กันเรียกซ้ำ ไม่งั้นเรียกคนเดิมซ้ำในนาทีเดียวกันจะไม่ประกาศเสียงให้
+      DATE_FORMAT(sc.sd_queue_calling_datetime, '%Y-%m-%d %H:%i:%s') AS call_seq,
       0 AS self_balance, 0 AS self_paid, 0 AS drug_received, 0 AS has_drug
     FROM sd_queue_calling sc
     INNER JOIN ovst          o ON o.vn      = sc.sd_queue_calling_vn
@@ -684,6 +693,7 @@ async function queryCalled(date: string, limit: number): Promise<CashierRow[]> {
     callName: clean(r.call_name) || clean(r.patient_name),
     dept: clean(r.dept_name) || "ห้องเก็บเงิน",
     time: clean(r.send_time),
+    callSeq: clean(r.call_seq) || undefined,
     status: "รอชำระ" as CashierStatus,
     route: "ไม่มียา" as CashierRoute,
     nextStep: "",
@@ -764,6 +774,31 @@ export async function getBoardQueue(date?: string): Promise<BoardData> {
 }
 
 /**
+ * ★ warm-cache ล่วงหน้า — ยิงขอเสียงของคนที่ "กำลังจะถึงคิว" (ยังไม่ถูกเรียก)
+ * ไปเก็บใน cache ของ createLegacyThaiTTS ตั้งแต่ตอนนี้ ก่อนเจ้าหน้าที่จะกดเรียกจริง
+ *
+ * ทำไมต้องมี: ชื่อที่ไม่เคยพูดมาก่อนต้องยิง network ไปหา Google Translate สด ๆ
+ * (ปกติ 1-3 วิ) ตอนนั้นค่อยทำถึงจะพูดช้า — พอ prefetch ไว้ล่วงหน้าตั้งแต่ตอน
+ * ยังต่อคิวอยู่ พอเจ้าหน้าที่กดเรียกจริง เสียงจะมาจาก cache ทันที ไม่ต้องรอ
+ *
+ * fire-and-forget เท่านั้น — ห้าม await ตรงนี้ ไม่งั้น /api/queue/call จะช้าไปด้วย
+ * และห้ามให้ error หลุดออกไปเป็น unhandled rejection (เช่น net บล็อก translate.google.com)
+ */
+const PREFETCH_AHEAD = 2;
+
+function prefetchUpcomingAnnouncements(rows: CashierRow[]): void {
+  const speed = ttsSpeed(undefined);
+  for (const row of pendingQueue(rows).slice(0, PREFETCH_AHEAD)) {
+    const text = row.callName || row.name;
+    if (!text.trim()) continue;
+    void createLegacyThaiTTS(text, speed).catch(() => {
+      // เงียบไว้ — พลาดตรงนี้แค่แปลว่าไม่ได้ warm cache ไว้ล่วงหน้า
+      // ตอนประกาศจริง /api/tts จะลองยิงเองอีกที ไม่ใช่ error ที่ต้องแจ้งใคร
+    });
+  }
+}
+
+/**
  * คนที่ถึงคิวตอนนี้ — ใช้ประกาศเรียกชื่ออัตโนมัติ (TTS)
  * ใช้ "ชื่อเต็ม" เพราะต้องอ่านออกเสียง (ชื่อถูกประกาศดัง ๆ อยู่แล้ว)
  * แต่ยังไม่ส่ง VN/HN ออกไป
@@ -798,12 +833,17 @@ export async function getCallQueue(date?: string): Promise<CallData> {
   ]);
   const head = called[0];
 
+  // warm cache ให้ 1-2 คนถัดไปในคิวรอ เผื่อเจ้าหน้าที่เรียกต่อ — ไม่บล็อก response
+  prefetchUpcomingAnnouncements(data.rows);
+
   return {
     updatedAt: data.updatedAt,
     calling: head
       ? {
-          // key เปลี่ยนตามเวลาที่ถูกเรียก → เรียกซ้ำคนเดิมก็ประกาศใหม่ได้
-          key: rowKey(`${head.vn}@${head.time}`),
+          // key เปลี่ยนตามเวลาที่ถูกเรียก (ถึงวินาที) → เรียกซ้ำคนเดิมก็ประกาศใหม่ได้
+          // ⚠️ ห้ามใช้ head.time (ปัดเหลือนาที) — ถ้าเรียกคนเดิมซ้ำภายในนาทีเดียวกัน
+          //    key จะเหมือนเดิมทุกตัวอักษร จอจะเข้าใจผิดว่าเป็นการเรียกครั้งเก่าแล้วไม่ประกาศให้
+          key: rowKey(`${head.vn}@${head.callSeq ?? head.time}`),
           queueNo: head.queueNo,
           name: head.name,
           callName: head.callName,

@@ -122,7 +122,8 @@ export default function QueueBoard({
   }, []);
 
   useEffect(() => {
-    const id = setInterval(refresh, Math.max(5, refreshSeconds) * 1000);
+    // เพดานล่างเดิม 5 วิ — ลดเหลือ 3 วิ ให้ตั้ง REFRESH_SECONDS เร็วขึ้นได้จริง
+    const id = setInterval(refresh, Math.max(3, refreshSeconds) * 1000);
     return () => clearInterval(id);
   }, [refresh, refreshSeconds]);
 

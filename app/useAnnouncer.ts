@@ -99,7 +99,9 @@ export function useAnnouncer({
   useEffect(() => {
     // รอบแรกยิงใน tick ถัดไป (ไม่เรียกตรง ๆ ใน effect body เพื่อไม่ให้เกิด cascading render)
     const first = setTimeout(poll, 0);
-    const id = setInterval(poll, Math.max(5, refreshSeconds) * 1000);
+    // เพดานล่างเดิม 5 วิ กันไม่ให้ตั้งเร็วกว่านี้ — ลดเหลือ 3 วิ
+    // จะได้ปรับ REFRESH_SECONDS ให้ประกาศเร็วขึ้นได้จริงถ้า รพ. ต้องการ
+    const id = setInterval(poll, Math.max(3, refreshSeconds) * 1000);
     return () => {
       clearTimeout(first);
       clearInterval(id);
