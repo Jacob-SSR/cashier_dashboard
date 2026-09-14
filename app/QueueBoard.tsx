@@ -130,6 +130,12 @@ export default function QueueBoard({
   const called = data.called ?? [];
   const current = called[0] ?? null;   // กำลังเรียกอยู่ตอนนี้
   const history = called.slice(1);     // เรียกไปแล้ว (ใหม่สุดอยู่บน)
+  // queueNo ของกล่องหลักเป็น "ลำดับการเรียกของวัน" เช่น กำลังเรียก 137
+  // จึงมีผู้ที่เรียกไปแล้ว 136 ราย ไม่ใช่แค่จำนวนการ์ด 5 ใบที่เลือกมาแสดง
+  const currentSequence = Number(current?.queueNo);
+  const calledTotal = Number.isFinite(currentSequence) && currentSequence > 0
+    ? Math.max(0, currentSequence - 1)
+    : history.length;
   const waiting = data.rows.slice(0, rowLimit);
 
   return (
@@ -262,7 +268,7 @@ export default function QueueBoard({
               <Icon name="check" />
             </span>
             <h2>ผู้ที่เรียกไปแล้ว</h2>
-            <span className="qb-chip">{history.length} ราย</span>
+            <span className="qb-chip">{calledTotal} ราย</span>
           </div>
 
           <div className="qb-done-list">
