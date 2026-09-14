@@ -63,10 +63,15 @@ export function useAnnouncer({
   const speak = useCallback(
     (row: NonNullable<CallData["calling"]>) => {
       const text = buildAnnouncement(row);
-      if (!text.trim()) return;
+      if (!text.trim()) return true;
       // ใส่ URL ตรง ๆ ใน <audio> — ไม่ต้องแปลงเป็น Blob/data URI
       // ทีวีบางยี่ห้อจัดการ object URL ได้ไม่ดี แต่ไฟล์ผ่าน HTTP ปกติเล่นได้หมด
-      getAudio()?.enqueue(`/api/tts?text=${encodeURIComponent(text)}`);
+      const mgr = getAudio();
+      // ห้ามเรียก play ก่อนถูกปลดล็อก มิฉะนั้น Chrome/TV จะ throw NotAllowedError
+      // และจะลองใหม่ใน poll รอบถัดไปหลังผู้ใช้กดเปิดเสียงแล้ว
+      if (!mgr?.isUnlocked()) return false;
+      mgr.enqueue(`/api/tts?text=${encodeURIComponent(text)}`);
+      return true;
     },
     [buildAnnouncement, getAudio],
   );
@@ -89,8 +94,7 @@ export function useAnnouncer({
       }
 
       if (announced.current.has(head.key)) return;
-      announced.current.add(head.key);
-      if (enabled) speak(head);
+      if (!enabled || speak(head)) announced.current.add(head.key);
     } catch {
       // ดึงไม่ได้รอบนี้ = ข้ามไป รอบหน้าค่อยว่ากัน จอไม่ต้องขึ้น error
     }
@@ -108,39 +112,26 @@ export function useAnnouncer({
     };
   }, [poll, refreshSeconds]);
 
-  // ── ตรวจว่าเบราว์เซอร์ยอมให้เล่นเสียงหรือยัง ────────────────────────────
-  // ลองปลดล็อกเองก่อน (บางเครื่อง/บาง kiosk ยอมอยู่แล้ว) ถ้าไม่ได้ค่อยขึ้นปุ่ม
-  // ให้กดด้วยรีโมต แล้วลองซ้ำเรื่อย ๆ เผื่อเบราว์เซอร์ยอมทีหลัง
+  // ── ตรวจสถานะ autoplay ──────────────────────────────────────────────────
+  // ห้าม probe ด้วย play() เอง: browser จะปฏิเสธก่อนมี user gesture อยู่แล้ว
   useEffect(() => {
     if (!enabled) return;
     let stop = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
-    const attempt = async (delay: number) => {
+    const checkUnlock = () => {
       if (stop) return;
       const mgr = getAudio();
       if (!mgr) return;
-
-      // ⚠️ ห้าม probe ระหว่างที่กำลังประกาศอยู่
-      //    การ probe ต้องตั้ง src ของ element ซึ่งจะไปขัดจังหวะเสียงที่เล่นค้างอยู่
-      //    (AbortError: play() request was interrupted by a new load request)
-      //    ถ้าเล่นอยู่ได้ = เบราว์เซอร์ยอมแล้ว ไม่ต้อง probe ตั้งแต่แรก
       if (mgr.isUnlocked()) {
         setNeedsUnlock(false);
         return;
       }
-
-      const ok = await mgr.unlock();
-      if (stop) return;
-      if (ok) {
-        setNeedsUnlock(false);
-        return; // ปลดล็อกแล้ว ไม่ต้องลองอีก
-      }
       setNeedsUnlock(true);
-      timer = setTimeout(() => void attempt(10_000), delay);
+      timer = setTimeout(checkUnlock, 10_000);
     };
 
-    void attempt(10_000);
+    checkUnlock();
 
     /**
      * ★ กดตรงไหนก็ได้ทั้งจอ = ปลดล็อกเสียง

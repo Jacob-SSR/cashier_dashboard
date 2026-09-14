@@ -29,19 +29,10 @@ export class AudioQueueManager {
   private queue: Task[] = [];
   private playing = false;
   private unlocked = false;
+  private unlocking: Promise<boolean> | null = null;
 
   /** element เดียวใช้ซ้ำตลอด — ทีวีบางรุ่นสร้าง Audio ใหม่รัว ๆ แล้วค้าง */
   private el: HTMLAudioElement | null = null;
-
-  /**
-   * ⚠️ ต้องเป็นคนละ element กับตัวที่ใช้เล่นประกาศเด็ดขาด
-   *
-   * เดิมใช้ตัวเดียวกัน พอ unlock() ไปตั้ง src เป็นไฟล์เงียบระหว่างที่ประกาศ
-   * กำลังเล่นอยู่ เบราว์เซอร์ก็ยกเลิกการเล่นทิ้ง ขึ้น
-   *   AbortError: The play() request was interrupted by a new load request
-   * แล้วประกาศนั้นก็เงียบไปเลย — เป็นสาเหตุที่เสียงไม่ออกทั้งที่ไฟล์ปกติดี
-   */
-  private unlockEl: HTMLAudioElement | null = null;
 
   private makeEl(): HTMLAudioElement {
     const el = new Audio();
@@ -61,61 +52,41 @@ export class AudioQueueManager {
    * เบราว์เซอร์นับว่าเป็น user gesture แล้วจะยอมให้เล่นเสียงได้ตลอดไป
    * เล่นไฟล์เงียบสั้น ๆ 1 ครั้งเพื่อ "จอง" สิทธิ์ไว้
    */
-  async unlock(fromGesture = false): Promise<boolean> {
-    if (this.unlocked) return true;
+  unlock(fromGesture = false): Promise<boolean> {
+    if (this.unlocked) return Promise.resolve(true);
     // กำลังประกาศอยู่ = เบราว์เซอร์ยอมให้เล่นแล้ว ไม่ต้องไปยุ่งอะไรอีก
     if (this.playing) {
       this.unlocked = true;
-      return true;
+      return Promise.resolve(true);
     }
 
-    if (!this.unlockEl) this.unlockEl = this.makeEl();
-    const probe = this.unlockEl;
-    const main = this.element();
+    // ห้ามลอง play เองนอก user gesture เพราะจะได้ NotAllowedError ทุกครั้งบน Chrome/TV
+    if (!fromGesture) return Promise.resolve(false);
+    // pointerdown + click หรือปุ่มบนจออาจเข้ามาซ้อนกัน ใช้ promise เดิม
+    if (this.unlocking) return this.unlocking;
 
-    // ⚠️ ต้องยิง play() ของทั้งสอง element "ก่อน await ใด ๆ"
-    //    เบราว์เซอร์นับเฉพาะ play() ที่ถูกเรียกใน task เดียวกับการกดปุ่ม
-    //    ถ้ารอ await ตัวแรกเสร็จค่อยยิงตัวที่สอง ตัวที่สองจะหลุด gesture แล้วโดนบล็อก
-    probe.src = SILENT_MP3;
-    probe.muted = true;
-    main.src = SILENT_MP3;
-    main.muted = true;
-
-    const pProbe = probe.play();
-    const pMain = main.play();
-
-    try {
-      await pProbe;
-      probe.pause();
-      probe.currentTime = 0;
-
-      // element หลักอาจล้มได้โดยที่ probe ผ่าน — ไม่ถือว่าล้มเหลวทั้งหมด
-      await pMain.catch(() => {});
-      main.pause();
-      main.currentTime = 0;
-      main.muted = false;
-
-      this.unlocked = true;
-      return true;
-    } catch {
-      main.muted = false;
-
-      // ⚠️ มาถึงตรงนี้ไม่ได้แปลว่าเบราว์เซอร์บล็อกเสมอไป
-      //    ไฟล์เงียบที่ใช้ทดสอบเป็น MP3 ซึ่งบางเบราว์เซอร์ถอดรหัสไม่ได้
-      //    (Chromium รุ่นไม่มี codec ลิขสิทธิ์ ฯลฯ) แล้ว play() จะ reject
-      //    ทั้งที่ประกาศจริงเล่นได้ปกติ
-      //
-      //    ถ้าเป็นการ "กดจริงของผู้ใช้" ให้ถือว่าปลดล็อกแล้ว เพราะการกดคือ
-      //    สิ่งเดียวที่นโยบาย autoplay ต้องการ ไม่งั้นแถบให้กดจะค้างตลอด
-      //    กดแล้วกดอีกก็ไม่หาย — ซึ่งแย่กว่ามาก
-      //    ถ้าสุดท้ายเล่นไม่ได้จริง playOne() จะเจอ NotAllowedError
-      //    แล้วตั้งกลับเป็นยังไม่ปลดล็อกให้เอง แถบก็จะกลับมา
-      if (fromGesture) {
+    const el = this.element();
+    el.src = SILENT_WAV;
+    el.muted = true;
+    // เรียกก่อน await ใด ๆ เพื่อให้ browser ผูกกับ user gesture นี้
+    const play = el.play();
+    this.unlocking = play
+      .then(() => {
+        el.pause();
+        el.currentTime = 0;
+        el.muted = false;
         this.unlocked = true;
         return true;
-      }
-      return false;
-    }
+      })
+      .catch((err: unknown) => {
+        el.muted = false;
+        console.warn("[audio] ปลดล็อกเสียงไม่สำเร็จ:", err);
+        return false;
+      })
+      .finally(() => {
+        this.unlocking = null;
+      });
+    return this.unlocking;
   }
 
   isUnlocked(): boolean {
@@ -197,6 +168,9 @@ export class AudioQueueManager {
   }
 }
 
-/** MP3 เงียบสั้นที่สุด ใช้ปลดล็อกตอนกดปุ่ม ไม่ต้องยิงเน็ต */
+/** WAV PCM เงียบ 1 sample — browser/TV รองรับกว้างกว่า MP3 และไม่ต้องยิงเน็ต */
+const SILENT_WAV = "data:audio/wav;base64,UklGRiUAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQEAAACA";
+
+/** เก็บไว้เพื่อรองรับการอ้างอิงจาก build เก่า; ไม่ใช้เป็น probe แล้ว */
 const SILENT_MP3 =
   "data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tAwAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAEAAABIADAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDA//////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAAAAAAAAAAAASDs90hvAAAAAAAAAAAAAAAAAAAA//sQxAADwAABpAAAACAAADSAAAAETEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//sQxCADwAABpAAAACAAADSAAAAEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
